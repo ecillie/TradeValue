@@ -1,3 +1,29 @@
+basic_goalie_stats
+        Column         |         Type          | Collation | Nullable |                    Default                     
+-----------------------+-----------------------+-----------+----------+------------------------------------------------
+ id                    | integer               |           | not null | nextval('basic_goalie_stats_id_seq'::regclass)
+ player_id             | integer               |           | not null | 
+ contract_id           | integer               |           | not null | 
+ season                | integer               |           | not null | 
+ playoff               | boolean               |           | not null | 
+ team                  | character varying(50) |           | not null | 
+ gp                    | integer               |           | not null | 
+ wins                  | integer               |           | not null | 
+ losses                | integer               |           | not null | 
+ ot_losses             | integer               |           | not null | 
+ shots_against         | integer               |           | not null | 
+ saves                 | integer               |           | not null | 
+ save_percentage       | numeric(5,2)          |           | not null | 
+ goals_against         | integer               |           | not null | 
+ goals_against_average | numeric(5,2)          |           | not null | 
+ shutouts              | integer               |           | not null | 
+ time_on_ice           | integer               |           | not null | 
+Indexes:
+    "basic_goalie_stats_pkey" PRIMARY KEY, btree (id)
+Foreign-key constraints:
+    "fk_basic_goalie_stats_contract" FOREIGN KEY (contract_id) REFERENCES contracts(id) ON DELETE CASCADE
+    "fk_basic_goalie_stats_player" FOREIGN KEY (player_id) REFERENCES player_info(id) ON DELETE CASCADE
+
 basic_player_stats
    Column    |         Type          | Collation | Nullable |                    Default                     
 -------------+-----------------------+-----------+----------+------------------------------------------------

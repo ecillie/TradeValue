@@ -52,3 +52,25 @@ class BasicPlayerStats(Base):
     pim = Column(Integer, nullable=False)
     shots = Column(Integer, nullable=False)
     shootpct = Column(Numeric(5, 2), nullable=False)
+
+class BasicGoalieStats(Base):
+    """Basic goalie statistics model matching basic_goalie_stats table schema"""
+    __tablename__ = "basic_goalie_stats"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    player_id = Column(Integer, ForeignKey("player_info.id", ondelete="CASCADE"), nullable=False)
+    contract_id = Column(Integer, ForeignKey("contracts.id", ondelete="CASCADE"), nullable=False)
+    season = Column(Integer, nullable=False)
+    playoff = Column(Boolean, nullable=False)
+    team = Column(String(50), nullable=False)
+    gp = Column(Integer, nullable=False)
+    wins = Column(Integer, nullable=False)
+    losses = Column(Integer, nullable=False)
+    ot_losses = Column(Integer, nullable=False)
+    shots_against = Column(Integer, nullable=False)
+    saves = Column(Integer, nullable=False)
+    save_percentage = Column(Numeric(5, 2), nullable=False)
+    goals_against = Column(Integer, nullable=False)
+    goals_against_average = Column(Numeric(5, 2), nullable=False)
+    shutouts = Column(Integer, nullable=False)
+    time_on_ice = Column(Integer, nullable=False)
