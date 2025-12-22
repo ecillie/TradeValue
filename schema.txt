@@ -1,0 +1,58 @@
+basic_player_stats
+   Column    |         Type          | Collation | Nullable |                    Default                     
+-------------+-----------------------+-----------+----------+------------------------------------------------
+ id          | integer               |           | not null | nextval('basic_player_stats_id_seq'::regclass)
+ player_id   | integer               |           | not null | 
+ contract_id | integer               |           | not null | 
+ season      | integer               |           | not null | 
+ playoff     | boolean               |           | not null | 
+ team        | character varying(50) |           | not null | 
+ gp          | integer               |           | not null | 
+ goals       | integer               |           | not null | 
+ assists     | integer               |           | not null | 
+ points      | integer               |           | not null | 
+ plus_minus  | integer               |           | not null | 
+ pim         | integer               |           | not null | 
+ shots       | integer               |           | not null | 
+ shootpct    | numeric(5,2)          |           | not null | 
+Indexes:
+    "basic_player_stats_pkey" PRIMARY KEY, btree (id)
+Foreign-key constraints:
+    "fk_stats_contract" FOREIGN KEY (contract_id) REFERENCES contracts(id) ON DELETE CASCADE
+    "fk_stats_player" FOREIGN KEY (player_id) REFERENCES player_info(id) ON DELETE CASCADE
+
+contracts
+   Column    |         Type          | Collation | Nullable |                Default                
+-------------+-----------------------+-----------+----------+---------------------------------------
+ id          | integer               |           | not null | nextval('contracts_id_seq'::regclass)
+ player_id   | integer               |           | not null | 
+ team        | character varying(50) |           | not null | 
+ start_year  | integer               |           | not null | 
+ end_year    | integer               |           | not null | 
+ duration    | integer               |           | not null | 
+ cap_hit     | numeric(12,2)         |           | not null | 
+ rfa         | boolean               |           | not null | 
+ elc         | boolean               |           | not null | 
+ cap_pct     | numeric(5,4)          |           | not null | 
+ total_value | numeric(15,2)         |           |          | 
+Indexes:
+    "contracts_pkey" PRIMARY KEY, btree (id)
+Foreign-key constraints:
+    "contracts_player_id_fkey" FOREIGN KEY (player_id) REFERENCES player_info(id) ON DELETE CASCADE
+Referenced by:
+    TABLE "basic_player_stats" CONSTRAINT "fk_stats_contract" FOREIGN KEY (contract_id) REFERENCES contracts(id) ON DELETE CASCADE        
+
+player_info
+-----------+-----------------------+-----------+----------+-----------------------------------------
+ id        | integer               |           | not null | nextval('player_info_id_seq'::regclass)
+ firstname | character varying(50) |           | not null | 
+ lastname  | character varying(50) |           | not null | 
+ team      | character varying(50) |           | not null | 
+ position  | character varying(50) |           | not null | 
+ age       | integer               |           | not null | 
+Indexes:
+    "player_info_pkey" PRIMARY KEY, btree (id)
+Referenced by:
+    TABLE "contracts" CONSTRAINT "contracts_player_id_fkey" FOREIGN KEY (player_id) REFERENCES player_info(id) ON DELETE CASCADE
+    TABLE "basic_player_stats" CONSTRAINT "fk_stats_player" FOREIGN KEY (player_id) REFERENCES player_info(id) ON DELETE CASCADE
+

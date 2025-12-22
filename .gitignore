@@ -1,1 +1,8 @@
 /backend/.env
+.cursorrules
+__pycache__/
+frontend/node_modules/
+frontend/package-lock.json
+backend/app/ml/artifacts/*.pkl
+.env
+backend/.pytest_cache/
