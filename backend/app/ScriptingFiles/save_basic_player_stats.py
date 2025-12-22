@@ -1,6 +1,9 @@
 import sys
 import os
 import traceback
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+
 import requests
 import time
 from sqlalchemy.orm import Session
@@ -8,7 +11,6 @@ from decimal import Decimal
 from app.database import SessionLocal, init_db
 from app.models import Player, Contract, BasicPlayerStats, BasicGoalieStats
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 headers = {
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
@@ -48,7 +50,7 @@ def make_request_with_rate_limit(url, delay=0.5, max_retries=3):
     return None
 
 
-def get_detailed_career_stats():
+def get_skater_stats():
     """Grabs all the player stats from the NHL API and saves them to the database"""
     
     active_ids = set()
@@ -136,8 +138,6 @@ def get_detailed_career_stats():
 
     save_stats_to_db(all_rows)
 
-<<<<<<< Updated upstream
-=======
 def get_goalie_stats():
     """Grabs all the goalie stats from the NHL API and saves them to the database"""
     active_ids = set()
@@ -333,7 +333,6 @@ def save_goalie_stats_to_db(stats_records):
     finally:
         db.close()
 
->>>>>>> Stashed changes
 def parse_player_name(full_name: str):
     """Takes a full name and splits it into first and last name"""
     if not full_name:
@@ -453,9 +452,6 @@ def save_stats_to_db(stats_records):
         db.close()
 
 if __name__ == "__main__":
-<<<<<<< Updated upstream
-    get_detailed_career_stats()
-=======
-    #get_skater_stats()
+    get_skater_stats()
     get_goalie_stats()
->>>>>>> Stashed changes
+
