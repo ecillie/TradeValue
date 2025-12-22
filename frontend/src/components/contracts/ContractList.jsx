@@ -1,7 +1,7 @@
 import ContractCard from './ContractCard';
 import './ContractList.css';
 
-function ContractList({ contracts, players = [], onContractClick, loading = false }) {
+function ContractList({ contracts, players, onContractClick, loading = false }) {
     if (loading) {
         return <div className="loading">Loading contracts...</div>;
     }
@@ -10,7 +10,6 @@ function ContractList({ contracts, players = [], onContractClick, loading = fals
         return <div className="empty-state">No contracts found</div>;
     }
 
-    // Create a lookup map for players by ID
     const playerMap = {};
     players.forEach(player => {
         playerMap[player.id] = player;
