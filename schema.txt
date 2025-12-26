@@ -1,3 +1,51 @@
+advanced_goalie_stats
+            Column             |         Type          | Collation | Nullable |                      Default                      
+-------------------------------+-----------------------+-----------+----------+---------------------------------------------------
+ id                            | integer               |           | not null | nextval('advanced_goalie_stats_id_seq'::regclass)
+ player_id                     | integer               |           | not null | 
+ contract_id                   | integer               |           | not null | 
+ season                        | integer               |           | not null | 
+ playoff                       | boolean               |           | not null | false
+ team                          | character varying(50) |           | not null | 
+ situation                     | character varying(20) |           | not null | 
+ icetime                       | numeric(10,2)         |           |          | 
+ x_goals                       | numeric(8,2)          |           |          | 
+ goals                         | numeric(8,2)          |           |          | 
+ unblocked_shot_attempts       | integer               |           |          | 
+ blocked_shot_attempts         | integer               |           |          | 
+ x_rebounds                    | numeric(8,2)          |           |          | 
+ rebounds                      | integer               |           |          | 
+ x_freeze                      | numeric(8,2)          |           |          | 
+ act_freeze                    | integer               |           |          | 
+ x_on_goal                     | numeric(8,2)          |           |          | 
+ on_goal                       | integer               |           |          | 
+ x_play_stopped                | numeric(8,2)          |           |          | 
+ play_stopped                  | integer               |           |          | 
+ x_play_continued_in_zone      | numeric(8,2)          |           |          | 
+ play_continued_in_zone        | integer               |           |          | 
+ x_play_continued_outside_zone | numeric(8,2)          |           |          | 
+ play_continued_outside_zone   | integer               |           |          | 
+ flurry_adjusted_x_goals       | numeric(8,2)          |           |          | 
+ low_danger_shots              | integer               |           |          | 
+ medium_danger_shots           | integer               |           |          | 
+ high_danger_shots             | integer               |           |          | 
+ low_danger_x_goals            | numeric(8,2)          |           |          | 
+ medium_danger_x_goals         | numeric(8,2)          |           |          | 
+ high_danger_x_goals           | numeric(8,2)          |           |          | 
+ low_danger_goals              | integer               |           |          | 
+ medium_danger_goals           | integer               |           |          | 
+ high_danger_goals             | integer               |           |          | 
+Indexes:
+    "advanced_goalie_stats_pkey" PRIMARY KEY, btree (id)
+    "advanced_goalie_stats_player_id_contract_id_season_playoff__key" UNIQUE CONSTRAINT, btree (player_id, contract_id, season, playoff, situati
+on)
+Foreign-key constraints:
+    "advanced_goalie_stats_contract_id_fkey" FOREIGN KEY (contract_id) REFERENCES contracts(id) ON DELETE CASCADE
+    "advanced_goalie_stats_player_id_fkey" FOREIGN KEY (player_id) REFERENCES player_info(id) ON DELETE CASCADE
+    "fk_advanced_goalie_stats_contract" FOREIGN KEY (contract_id) REFERENCES contracts(id) ON DELETE CASCADE
+    "fk_advanced_goalie_stats_player" FOREIGN KEY (player_id) REFERENCES player_info(id) ON DELETE CASCADE
+
+
 basic_goalie_stats
         Column         |         Type          | Collation | Nullable |                    Default                     
 -----------------------+-----------------------+-----------+----------+------------------------------------------------

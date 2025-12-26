@@ -3,6 +3,53 @@ from sqlalchemy import Column, Integer, String, Numeric, Boolean, ForeignKey
 from app.database import Base
 
 
+class AdvancedGoalieStats(Base):
+    """Advanced goalie statistics model matching advanced_goalie_stats table schema"""
+    __tablename__ = "advanced_goalie_stats"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    player_id = Column(Integer, ForeignKey("player_info.id", ondelete="CASCADE"), nullable=False)
+    contract_id = Column(Integer, ForeignKey("contracts.id", ondelete="CASCADE"), nullable=False)
+    season = Column(Integer, nullable=False)
+    playoff = Column(Boolean, nullable=False, default=False)
+    team = Column(String(50), nullable=False)
+    situation = Column(String(20), nullable=False)
+    
+    icetime = Column(Numeric(10, 2), nullable=True)
+    
+    x_goals = Column(Numeric(8, 2), nullable=True)
+    goals = Column(Numeric(8, 2), nullable=True)
+    
+    unblocked_shot_attempts = Column(Integer, nullable=True)
+    blocked_shot_attempts = Column(Integer, nullable=True)
+    
+    x_rebounds = Column(Numeric(8, 2), nullable=True)
+    rebounds = Column(Integer, nullable=True)
+    
+    x_freeze = Column(Numeric(8, 2), nullable=True)
+    act_freeze = Column(Integer, nullable=True)
+
+    x_on_goal = Column(Numeric(8, 2), nullable=True)
+    on_goal = Column(Integer, nullable=True)
+    
+    x_play_stopped = Column(Numeric(8, 2), nullable=True)
+    play_stopped = Column(Integer, nullable=True)
+    
+    x_play_continued_in_zone = Column(Numeric(8, 2), nullable=True)
+    play_continued_in_zone = Column(Integer, nullable=True)
+    x_play_continued_outside_zone = Column(Numeric(8, 2), nullable=True)
+    play_continued_outside_zone = Column(Integer, nullable=True)
+    flurry_adjusted_x_goals = Column(Numeric(8, 2), nullable=True)
+    low_danger_shots = Column(Integer, nullable=True)
+    medium_danger_shots = Column(Integer, nullable=True)
+    high_danger_shots = Column(Integer, nullable=True)
+    low_danger_x_goals = Column(Numeric(8, 2), nullable=True)
+    medium_danger_x_goals = Column(Numeric(8, 2), nullable=True)
+    high_danger_x_goals = Column(Numeric(8, 2), nullable=True)
+    low_danger_goals = Column(Integer, nullable=True)
+    medium_danger_goals = Column(Integer, nullable=True)
+    high_danger_goals = Column(Integer, nullable=True)
+
 class Player(Base):
     """Player model matching player_info table schema"""
     __tablename__ = "player_info"
