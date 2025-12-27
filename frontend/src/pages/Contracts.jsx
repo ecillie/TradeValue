@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
-import { getContracts } from '../services/api';
+import { getContracts, getPlayers } from '../services/api';
 import ContractList from '../components/contracts/ContractList';
 import './Contracts.css';
 
 function Contracts() {
     const [contracts, setContracts] = useState([]);
     const [loading, setLoading] = useState(true);
-
+    const [players, setPlayers] = useState([]);
     useEffect(() => {
         fetchContracts();
     }, []);
@@ -16,8 +16,10 @@ function Contracts() {
             setLoading(true);
             const data = await getContracts();
             setContracts(data);
+            const playersData = await getPlayers();
+            setPlayers(playersData);
         } catch (error) {
-            console.error('Error fetching contracts:', error);
+            console.error('Error fetching contracts and players:', error);
         } finally {
             setLoading(false);
         }
@@ -25,7 +27,7 @@ function Contracts() {
 
     const handleContractClick = (contract) => {
         console.log('Contract clicked:', contract);
-        // TODO: Navigate to contract detail page or show modal
+
     };
 
     return (
@@ -34,6 +36,7 @@ function Contracts() {
             
             <ContractList
                 contracts={contracts}
+                players={players}
                 onContractClick={handleContractClick}
                 loading={loading}
             />

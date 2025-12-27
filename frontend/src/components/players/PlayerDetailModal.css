@@ -1,0 +1,520 @@
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    padding: 20px;
+}
+
+.modal-content {
+    background-color: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 8px;
+    max-width: 1200px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    border-bottom: 1px solid #333;
+    position: sticky;
+    top: 0;
+    background-color: #1a1a1a;
+    z-index: 10;
+}
+
+.modal-header h2 {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.87);
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 32px;
+    cursor: pointer;
+    color: #888;
+    line-height: 1;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.modal-close:hover {
+    background-color: #333;
+    color: rgba(255, 255, 255, 0.87);
+}
+
+.modal-body {
+    padding: 20px;
+}
+
+.player-info-section {
+    display: flex;
+    gap: 30px;
+    padding: 15px;
+    background-color: #242424;
+    border: 1px solid #333;
+    border-radius: 8px;
+    margin-bottom: 30px;
+}
+
+.info-row {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.info-label {
+    font-weight: 600;
+    color: #888;
+    font-size: 0.9em;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.info-value {
+    font-size: 1.1em;
+    color: rgba(255, 255, 255, 0.87);
+    font-weight: 500;
+}
+
+.section {
+    margin-bottom: 40px;
+}
+
+.section h3 {
+    margin: 0 0 20px 0;
+    color: rgba(255, 255, 255, 0.87);
+    font-size: 1.5em;
+    border-bottom: 2px solid #333;
+    padding-bottom: 10px;
+}
+
+.stats-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.stats-header h3 {
+    margin: 0;
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.season-toggle {
+    display: flex;
+    gap: 0;
+    border: 1px solid #333;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.toggle-btn {
+    background-color: #242424;
+    color: #888;
+    border: none;
+    padding: 0.5rem 1rem;
+    font-size: 0.9em;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    border-radius: 0;
+}
+
+.toggle-btn:first-child {
+    border-right: 1px solid #333;
+}
+
+.toggle-btn:hover {
+    background-color: #2a2a2a;
+    color: rgba(255, 255, 255, 0.87);
+}
+
+.toggle-btn.active {
+    background-color: #646cff;
+    color: white;
+}
+
+.toggle-btn.active:hover {
+    background-color: #535bf2;
+}
+
+.contracts-table-wrapper {
+    overflow-x: auto;
+    border: 1px solid #333;
+    border-radius: 8px;
+}
+
+.contracts-table {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: #1a1a1a;
+}
+
+.contracts-table thead {
+    background-color: #242424;
+}
+
+.contracts-table th {
+    padding: 12px 15px;
+    text-align: left;
+    font-weight: 600;
+    color: #888;
+    font-size: 0.9em;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid #333;
+}
+
+.contracts-table td {
+    padding: 12px 15px;
+    border-bottom: 1px solid #333;
+    color: rgba(255, 255, 255, 0.87);
+}
+
+.contracts-table tbody tr:hover {
+    background-color: #242424;
+}
+
+.contracts-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.contracts-table tfoot {
+    background-color: #242424;
+    border-top: 2px solid #646cff;
+}
+
+.contracts-table tfoot td {
+    padding: 15px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.87);
+    border-bottom: none;
+}
+
+.contract-badges {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.contract-badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.contract-badge.elc {
+    background-color: #10b981;
+    color: white;
+}
+
+.contract-badge.rfa {
+    background-color: #f59e0b;
+    color: white;
+}
+
+.contract-badge.ufa {
+    background-color: #6b7280;
+    color: white;
+}
+
+.loading, .error, .empty-state {
+    text-align: center;
+    padding: 40px;
+    color: #888;
+}
+
+.error {
+    color: #d32f2f;
+}
+
+.stats-table-wrapper {
+    overflow-x: auto;
+    border: 1px solid #333;
+    border-radius: 8px;
+}
+
+.stats-table {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: #1a1a1a;
+}
+
+.stats-table thead {
+    background-color: #242424;
+}
+
+.stats-table th {
+    padding: 12px 15px;
+    text-align: left;
+    font-weight: 600;
+    color: #888;
+    font-size: 0.9em;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid #333;
+}
+
+.stats-table td {
+    padding: 12px 15px;
+    border-bottom: 1px solid #333;
+    color: rgba(255, 255, 255, 0.87);
+}
+
+.stats-table tbody tr:hover {
+    background-color: #242424;
+}
+
+.stats-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.stats-table tfoot {
+    background-color: #242424;
+    border-top: 2px solid #646cff;
+}
+
+.stats-table tfoot td {
+    padding: 15px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.87);
+    border-bottom: none;
+}
+
+.totals-row {
+    background-color: #242424;
+}
+
+.totals-row td {
+    background-color: #242424;
+}
+
+.chart-container {
+    padding: 20px;
+    background-color: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 8px;
+    margin-top: 20px;
+}
+
+/* Responsive design */
+@media (prefers-color-scheme: light) {
+    .modal-content {
+        background-color: #ffffff;
+        border-color: #e0e0e0;
+    }
+    
+    .modal-header {
+        background-color: #ffffff;
+        border-bottom-color: #e0e0e0;
+    }
+    
+    .modal-header h2 {
+        color: #213547;
+    }
+    
+    .modal-close {
+        color: #666;
+    }
+    
+    .modal-close:hover {
+        background-color: #f0f0f0;
+        color: #213547;
+    }
+    
+    .player-info-section {
+        background-color: #f9f9f9;
+        border-color: #e0e0e0;
+    }
+    
+    .info-label {
+        color: #666;
+    }
+    
+    .info-value {
+        color: #213547;
+    }
+    
+    .section h3 {
+        color: #213547;
+        border-bottom-color: #e0e0e0;
+    }
+    
+    .stats-header h3 {
+        color: #213547;
+    }
+    
+    .season-toggle {
+        border-color: #e0e0e0;
+    }
+    
+    .toggle-btn {
+        background-color: #f9f9f9;
+        color: #666;
+    }
+    
+    .toggle-btn:first-child {
+        border-right-color: #e0e0e0;
+    }
+    
+    .toggle-btn:hover {
+        background-color: #e9e9e9;
+        color: #213547;
+    }
+    
+    .toggle-btn.active {
+        background-color: #646cff;
+        color: white;
+    }
+    
+    .toggle-btn.active:hover {
+        background-color: #535bf2;
+    }
+    
+    .loading, .error, .empty-state {
+        color: #666;
+    }
+    
+    .contracts-table-wrapper {
+        border-color: #e0e0e0;
+    }
+    
+    .contracts-table {
+        background-color: #ffffff;
+    }
+    
+    .contracts-table thead {
+        background-color: #f9f9f9;
+    }
+    
+    .contracts-table th {
+        color: #666;
+        border-bottom-color: #e0e0e0;
+    }
+    
+    .contracts-table td {
+        border-bottom-color: #e0e0e0;
+        color: #213547;
+    }
+    
+    .contracts-table tbody tr:hover {
+        background-color: #f9f9f9;
+    }
+    
+    .contracts-table tfoot {
+        background-color: #f9f9f9;
+    }
+    
+    .contracts-table tfoot td {
+        color: #213547;
+    }
+    
+    .stats-table-wrapper {
+        border-color: #e0e0e0;
+    }
+    
+    .stats-table {
+        background-color: #ffffff;
+    }
+    
+    .stats-table thead {
+        background-color: #f9f9f9;
+    }
+    
+    .stats-table th {
+        color: #666;
+        border-bottom-color: #e0e0e0;
+    }
+    
+    .stats-table td {
+        border-bottom-color: #e0e0e0;
+        color: #213547;
+    }
+    
+    .stats-table tbody tr:hover {
+        background-color: #f9f9f9;
+    }
+    
+    .stats-table tfoot {
+        background-color: #f9f9f9;
+    }
+    
+    .stats-table tfoot td {
+        color: #213547;
+    }
+    
+    .totals-row {
+        background-color: #f9f9f9;
+    }
+    
+    .totals-row td {
+        background-color: #f9f9f9;
+    }
+    
+    .chart-container {
+        background-color: #ffffff;
+        border-color: #e0e0e0;
+    }
+}
+
+@media (max-width: 768px) {
+    .modal-content {
+        max-width: 100%;
+        max-height: 100vh;
+        border-radius: 0;
+    }
+
+    .modal-body {
+        padding: 15px;
+    }
+
+    .player-info-section {
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .contracts-table-wrapper {
+        overflow-x: scroll;
+    }
+
+    .contracts-table {
+        min-width: 600px;
+    }
+
+    .stats-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+    }
+
+    .stats-table-wrapper {
+        overflow-x: scroll;
+    }
+
+    .stats-table {
+        min-width: 600px;
+    }
+}

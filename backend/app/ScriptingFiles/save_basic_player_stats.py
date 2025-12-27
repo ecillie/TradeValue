@@ -9,7 +9,7 @@ import time
 from sqlalchemy.orm import Session
 from decimal import Decimal
 from app.database import SessionLocal, init_db
-from app.models import Player, Contract, BasicPlayerStats
+from app.models import Player, Contract, BasicPlayerStats, BasicGoalieStats
 
 
 headers = {
@@ -303,7 +303,7 @@ def save_goalie_stats_to_db(stats_records):
                 existing.time_on_ice = time_on_ice
                 updated_count += 1
             else:
-                new_stats = BasicPlayerStats(
+                new_stats = BasicGoalieStats(
                     player_id=player.id,
                     contract_id=contract.id,
                     season=season_int,
@@ -451,7 +451,7 @@ def save_stats_to_db(stats_records):
     finally:
         db.close()
 
-
 if __name__ == "__main__":
     get_skater_stats()
     get_goalie_stats()
+
