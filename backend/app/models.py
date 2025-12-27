@@ -15,13 +15,11 @@ class AdvancedSkaterStats(Base):
     team = Column(String(50), nullable=False)
     situation = Column(String(20), nullable=False)
     
-    # Basic game info
     games_played = Column(Integer, nullable=True)
     icetime = Column(Numeric(10, 2), nullable=True)
     shifts = Column(Integer, nullable=True)
     game_score = Column(Numeric(6, 2), nullable=True)
     
-    # On/Off ice percentages
     on_ice_x_goals_percentage = Column(Numeric(5, 4), nullable=True)
     off_ice_x_goals_percentage = Column(Numeric(5, 4), nullable=True)
     on_ice_corsi_percentage = Column(Numeric(5, 4), nullable=True)
@@ -30,7 +28,6 @@ class AdvancedSkaterStats(Base):
     off_ice_fenwick_percentage = Column(Numeric(5, 4), nullable=True)
     ice_time_rank = Column(Integer, nullable=True)
     
-    # Individual For (I_F_) stats
     i_f_x_on_goal = Column(Numeric(8, 2), nullable=True)
     i_f_x_goals = Column(Numeric(8, 2), nullable=True)
     i_f_x_rebounds = Column(Numeric(8, 2), nullable=True)
@@ -92,7 +89,6 @@ class AdvancedSkaterStats(Base):
     i_f_neutral_zone_shift_ends = Column(Integer, nullable=True)
     i_f_fly_shift_ends = Column(Integer, nullable=True)
     
-    # Faceoffs and other stats
     faceoffs_won = Column(Integer, nullable=True)
     faceoffs_lost = Column(Integer, nullable=True)
     time_on_bench = Column(Integer, nullable=True)
@@ -101,7 +97,6 @@ class AdvancedSkaterStats(Base):
     penalties_drawn = Column(Integer, nullable=True)
     shots_blocked_by_player = Column(Integer, nullable=True)
     
-    # OnIce For (OnIce_F_) stats
     on_ice_f_x_on_goal = Column(Numeric(8, 2), nullable=True)
     on_ice_f_x_goals = Column(Numeric(8, 2), nullable=True)
     on_ice_f_flurry_adjusted_x_goals = Column(Numeric(8, 2), nullable=True)
@@ -133,7 +128,6 @@ class AdvancedSkaterStats(Base):
     on_ice_f_x_goals_with_earned_rebounds_score_adjusted = Column(Numeric(8, 2), nullable=True)
     on_ice_f_x_goals_with_earned_rebounds_score_flurry_adjusted = Column(Numeric(8, 2), nullable=True)
     
-    # OnIce Against (OnIce_A_) stats
     on_ice_a_x_on_goal = Column(Numeric(8, 2), nullable=True)
     on_ice_a_x_goals = Column(Numeric(8, 2), nullable=True)
     on_ice_a_flurry_adjusted_x_goals = Column(Numeric(8, 2), nullable=True)
