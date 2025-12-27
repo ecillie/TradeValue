@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getPlayers, searchPlayers } from '../services/api';
 import PlayerList from '../components/players/PlayerList';
+import PlayerDetailModal from '../components/players/PlayerDetailModal';
 import Button from '../components/common/Button';
 import './Players.css';
 
@@ -10,6 +11,8 @@ function Players() {
     const [searchTerm, setSearchTerm] = useState('');
     const [filterTeam, setFilterTeam] = useState('');
     const [filterPosition, setFilterPosition] = useState('');
+    const [selectedPlayer, setSelectedPlayer] = useState(null);
+    const [isModalOpen, setIsModalOpen] = useState(false);
 
     useEffect(() => {
         fetchPlayers();
@@ -45,8 +48,13 @@ function Players() {
     };
 
     const handlePlayerClick = (player) => {
-        console.log('Player clicked:', player);
-        // TODO: Navigate to player detail page or show modal
+        setSelectedPlayer(player);
+        setIsModalOpen(true);
+    };
+
+    const handleCloseModal = () => {
+        setIsModalOpen(false);
+        setSelectedPlayer(null);
     };
 
     return (
@@ -93,6 +101,12 @@ function Players() {
                 players={players}
                 onPlayerClick={handlePlayerClick}
                 loading={loading}
+            />
+
+            <PlayerDetailModal
+                player={selectedPlayer}
+                isOpen={isModalOpen}
+                onClose={handleCloseModal}
             />
         </div>
     );
