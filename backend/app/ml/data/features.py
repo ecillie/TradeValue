@@ -9,7 +9,7 @@ def skater_data_to_features(df: pd.DataFrame) -> pd.DataFrame:
     """Adds features to the dataset"""
     df = df[df['icetime'] > 300 * 60].copy()  # Add .copy() here
     df['minutes_played'] = df['icetime'] / 60.0
-    df['log_cap_hit'] = np.log1p(df['cap_hit'])
+    df['log_cap_pct'] = np.log1p(df['cap_pct'])
     df['goals_per_60'] = df['i_f_goals'] / df['minutes_played']
     df['primary_assists_per_60'] = df['i_f_primary_assists'] / df['minutes_played']
     df['secondary_assists_per_60'] = df['i_f_secondary_assists'] / df['minutes_played']
@@ -31,7 +31,7 @@ def skater_data_to_features(df: pd.DataFrame) -> pd.DataFrame:
         'i_f_x_goals', 'i_f_shots_on_goal', 'i_f_unblocked_shot_attempts',
         'i_f_penalties', 'penalties_drawn', 
         'i_f_takeaways', 'i_f_giveaways', 'shots_blocked_by_player',
-        'icetime', 'minutes_played', 'cap_hit',
+        'icetime', 'minutes_played', 'cap_pct',
         'i_f_o_zone_shift_starts', 'i_f_d_zone_shift_starts', 'i_f_neutral_zone_shift_starts'
     ]
     df = df.drop(columns=drop_cols, errors='ignore').fillna(0)
@@ -42,7 +42,7 @@ def goalie_data_to_features(df: pd.DataFrame) -> pd.DataFrame:
     """Adds features to the dataset"""
     df = df[df['icetime'] > 300 * 60].copy()  # Add .copy() here
     df['minutes_played'] = df['icetime'] / 60.0
-    df['log_cap_hit'] = np.log1p(df['cap_hit'])
+    df['log_cap_pct'] = np.log1p(df['cap_pct'])
     df['GSAx_total'] = df['x_goals'] - df['goals']
     df['GSAx_per_60'] = df['GSAx_total'] / df['minutes_played']
     df['save_pct'] = 1 - (df['goals'] / df['on_goal'])
@@ -54,7 +54,7 @@ def goalie_data_to_features(df: pd.DataFrame) -> pd.DataFrame:
     
     cols_to_drop = [
         'id', 'season', 'team', 'playoff', 
-        'goals', 'x_goals', 'cap_hit', 
+        'goals', 'x_goals', 'cap_pct', 
         'rebounds', 'x_rebounds', 
         'act_freeze', 'x_freeze',
         'icetime', 'minutes_played' 

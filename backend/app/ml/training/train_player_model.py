@@ -26,11 +26,11 @@ def train_player_model(df: pd.DataFrame, model_name: str = 'player_model'):
     Trains a high-accuracy Gradient Boosting model with hyperparameter tuning.
     Saves the best model and feature names to the artifacts folder.
     """
-    features_to_exclude = ['player_id', 'season', 'contract_id', 'cap_hit', 'log_cap_hit', 'id']
+    features_to_exclude = ['player_id', 'season', 'contract_id', 'cap_pct', 'log_cap_pct', 'id']
     feature_cols = [c for c in df.columns if c not in features_to_exclude]
     
     X = df[feature_cols]
-    y = df['log_cap_hit']
+    y = df['log_cap_pct']
     
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
     

@@ -3,7 +3,8 @@ from sqlalchemy.orm import Session
 from sqlalchemy import and_, func, or_
 
 from app.database import SessionLocal, init_db
-from app.models import BasicPlayerStats, Player, Contract, AdvancedSkaterStats, AdvancedGoalieStats, BasicGoalieStats
+from app.models import BasicPlayerStats, Player, Contract, AdvancedSkaterStats, AdvancedGoalieStats, BasicGoalieStats, PlayerSalary
+
 
 # Test using cd /Users/evancillie/Documents/GitHub/TradeValue/backend
 # DB_HOST=localhost python3 -m app.ml.data.dataset_builder
@@ -48,41 +49,30 @@ def build_skater_advanced_dataset(player_list: list[Player]):
         player_ids = [p.id for p in player_list]
         
         query = db.query(
-            # 1. Identifiers
             Player.id,
-            AdvancedSkaterStats.contract_id,
+            PlayerSalary.cap_pct,
             
-            # 2. Target Variable (From 'contracts' table)
-            Contract.cap_hit,
-            
-            # 3. Usage & Normalization
             AdvancedSkaterStats.icetime,
             AdvancedSkaterStats.games_played,
             
-            # 4. Scoring Production (The "What")
             AdvancedSkaterStats.i_f_points,
             AdvancedSkaterStats.i_f_goals,
             AdvancedSkaterStats.i_f_primary_assists,
             AdvancedSkaterStats.i_f_secondary_assists,
             
-            # 5. Shooting & Offense (The "How")
             AdvancedSkaterStats.i_f_x_goals,
             AdvancedSkaterStats.i_f_shots_on_goal,
             AdvancedSkaterStats.i_f_unblocked_shot_attempts,
             
-            # 6. Play Driving & Two-Way Impact
             AdvancedSkaterStats.on_ice_x_goals_percentage,
             
-            # 7. Defensive Utility
             AdvancedSkaterStats.shots_blocked_by_player,
             AdvancedSkaterStats.i_f_takeaways,
             AdvancedSkaterStats.i_f_giveaways,
             
-            # 8. Discipline (Value Add/Subtract)
             AdvancedSkaterStats.i_f_penalties,
             AdvancedSkaterStats.penalties_drawn,
             
-            # 9. Deployment / Context (Zone Starts)
             AdvancedSkaterStats.i_f_o_zone_shift_starts,
             AdvancedSkaterStats.i_f_d_zone_shift_starts,
             AdvancedSkaterStats.i_f_neutral_zone_shift_starts,
@@ -90,7 +80,12 @@ def build_skater_advanced_dataset(player_list: list[Player]):
             AdvancedSkaterStats, Player.id == AdvancedSkaterStats.player_id
         ).outerjoin(
             Contract, Player.id == Contract.player_id
-        ).filter(
+        ).outerjoin(
+            PlayerSalary,
+            and_(
+                PlayerSalary.contract_id == Contract.id,
+                PlayerSalary.year == Contract.start_year
+            )).filter(
             Player.id.in_(player_ids),
             AdvancedSkaterStats.situation == 'all',
             Contract.elc == False,
@@ -112,7 +107,7 @@ def goalie_advanced_dataset(player_list: list[Player]):
         player_ids = [p.id for p in player_list] 
         query = db.query(
             Player.id,
-            Contract.cap_hit,
+            PlayerSalary.cap_pct,
             AdvancedGoalieStats.icetime,
             AdvancedGoalieStats.season,
             AdvancedGoalieStats.playoff,
@@ -154,7 +149,12 @@ def goalie_advanced_dataset(player_list: list[Player]):
             Contract, Player.id == Contract.player_id
         ).outerjoin(
             BasicGoalieStats, Player.id == BasicGoalieStats.player_id
-        ).filter(
+        ).outerjoin(
+            PlayerSalary,
+            and_(
+                PlayerSalary.contract_id == Contract.id,
+                PlayerSalary.year == Contract.start_year
+            )).filter(
             Player.id.in_(player_ids),
             AdvancedGoalieStats.situation == 'all',
             Contract.elc == False,

@@ -1,3 +1,19 @@
+player_salaries
+   Column    |     Type      | Collation | Nullable |                   Default                   
+-------------+---------------+-----------+----------+---------------------------------------------
+ id          | integer       |           | not null | nextval('player_salaries_id_seq'::regclass)
+ player_id   | integer       |           |          | 
+ contract_id | integer       |           |          | 
+ year        | integer       |           | not null | 
+ cap_hit     | numeric(12,2) |           | not null | 
+ cap_pct     | numeric(5,4)  |           | not null | 
+Indexes:
+    "player_salaries_pkey" PRIMARY KEY, btree (id)
+    "player_salaries_contract_id_year_key" UNIQUE CONSTRAINT, btree (contract_id, year)
+Foreign-key constraints:
+    "player_salaries_contract_id_fkey" FOREIGN KEY (contract_id) REFERENCES contracts(id) ON DELETE CASCADE
+    "player_salaries_player_id_fkey" FOREIGN KEY (player_id) REFERENCES player_info(id) ON DELETE CASCADE
+
 advanced_skater_stats
                            Column                            |         Type          | Collation | Nullable |                      Default                      
 -------------------------------------------------------------+-----------------------+-----------+----------+---------------------------------------------------
@@ -274,7 +290,7 @@ contracts
  duration    | integer               |           | not null | 
  rfa         | boolean               |           | not null | 
  elc         | boolean               |           | not null | 
- cap_pct     | numeric(5,4)          |           | not null | 
+ cap_hit     | numeric(12,2)         |           |          | 
  total_value | numeric(15,2)         |           |          | 
 Indexes:
     "contracts_pkey" PRIMARY KEY, btree (id)
