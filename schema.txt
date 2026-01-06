@@ -272,7 +272,6 @@ contracts
  start_year  | integer               |           | not null | 
  end_year    | integer               |           | not null | 
  duration    | integer               |           | not null | 
- cap_hit     | numeric(12,2)         |           | not null | 
  rfa         | boolean               |           | not null | 
  elc         | boolean               |           | not null | 
  cap_pct     | numeric(5,4)          |           | not null | 

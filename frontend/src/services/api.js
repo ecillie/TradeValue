@@ -68,9 +68,4 @@ export const predictContractValue = async (playerData) => {
     return response.data;
 };
 
-export const getPlayerContractPredictions = async (playerId) => {
-    const response = await api.get(`/api/players/${playerId}/contract-predictions`);
-    return response.data;
-};
-
 export default api
