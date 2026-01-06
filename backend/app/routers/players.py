@@ -285,7 +285,7 @@ def get_player_contract_predictions(player_id: int, db: Session = Depends(get_db
             
             contract_predictions.append({
                 'contract': contract,
-                'actual_cap_hit': float(contract.cap_hit),
+                'actual_cap_hit': float(contract.total_value / contract.duration) if contract.total_value and contract.duration > 0 else 0.0,
                 'expected_cap_hit': expected_cap_hit
             })
         except Exception as e:
