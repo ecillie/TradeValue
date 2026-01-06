@@ -45,12 +45,12 @@ def evaluate_model(model_name='forward_model'):
             print(f"Using {len(feature_cols)} features for evaluation")
     else:
         # Fallback if no saved features
-        features_to_exclude = ['player_id', 'season', 'contract_id', 'cap_hit', 'log_cap_hit', 'id']
+        features_to_exclude = ['player_id', 'season', 'contract_id', 'cap_pct', 'log_cap_pct', 'id']
         feature_cols = [c for c in df_features.columns if c not in features_to_exclude]
     
     # Extract features in the correct order (only those used during training)
     X = df_features[feature_cols]
-    y = df_features['log_cap_hit']
+    y = df_features['log_cap_pct']
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.2, random_state=42
     )
