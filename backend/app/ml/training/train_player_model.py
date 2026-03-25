@@ -9,7 +9,6 @@ from sklearn.linear_model import RidgeCV
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import r2_score, mean_absolute_error
 
-
 # Test using cd /Users/evancillie/Documents/GitHub/TradeValue/backend
 # DB_HOST=localhost python3 -m app.ml.training.train_player_model
 
@@ -44,7 +43,6 @@ def train_player_model(df: pd.DataFrame, model_name: str = 'player_model'):
         'l2_regularization': [0.0, 0.1, 1.0]
     }
     
-    print(f"Tuning {model_name} hyperparameters... (This may take a minute)")
     search = RandomizedSearchCV(
         gbm, 
         param_distributions, 
@@ -57,7 +55,6 @@ def train_player_model(df: pd.DataFrame, model_name: str = 'player_model'):
     )
     search.fit(X_train, y_train)
     best_model = search.best_estimator_
-    print(f"Best Params for {model_name}: {search.best_params_}")
     if not os.path.exists(ARTIFACTS_DIR):
         os.makedirs(ARTIFACTS_DIR)
     model_path = os.path.join(ARTIFACTS_DIR, f'{model_name}.pkl')
