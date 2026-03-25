@@ -58,6 +58,11 @@ export const getPlayerStats = async (playerId, params = {}) => {
     return response.data;
 };
 
+export const getPlayerContractPredictions = async (playerId) => {
+    const response = await api.get(`/api/players/${playerId}/contract-predictions`);
+    return response.data;
+};
+
 export const getPlayerStatsBySeason = async (playerId, season) => {
     return getPlayerStats(playerId, { season });
 };
