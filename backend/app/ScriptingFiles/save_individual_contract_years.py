@@ -31,13 +31,13 @@ def save_individual_contract_years():
         
         for contract in all_contracts:
             # For each contract, create salary records for each year
-            for year in range(contract.start_year, contract.end_year + 1):
-                year_str = str(year)
+            for i in range(contract.duration):
+                year_str = str(contract.start_year + i)
                 
                 # Check if this salary record already exists
                 existing = db.query(PlayerSalary).filter(
                     PlayerSalary.contract_id == contract.id,
-                    PlayerSalary.year == year
+                    PlayerSalary.year == year_str
                 ).first()
                 
                 if existing:
@@ -56,7 +56,7 @@ def save_individual_contract_years():
                 player_salary = PlayerSalary(
                     player_id=contract.player_id,
                     contract_id=contract.id,
-                    year=year,
+                    year=year_str,
                     cap_hit=cap_hit,
                     cap_pct=cap_pct,
                 )

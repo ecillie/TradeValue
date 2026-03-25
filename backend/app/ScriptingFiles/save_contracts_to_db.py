@@ -12,6 +12,12 @@ from app.models import Player, Contract
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))) 
 
+SALARY_CAP ={'2005' : Decimal('39000000'), '2006' : Decimal('44000000'), '2007' : Decimal('50300000'), '2008' : Decimal('56700000'), 
+'2009' : Decimal('56800000'), '2010' : Decimal('59400000'), '2011' : Decimal('64300000'), '2012' : Decimal('70200000'), 
+'2013' : Decimal('64300000'), '2014' : Decimal('69000000'), '2015' : Decimal('71400000'), '2016' : Decimal('73000000'),
+'2017' : Decimal('75000000'), '2018' : Decimal('79500000'), '2019' : Decimal('81500000'), '2020' : Decimal('81500000'), 
+'2021' : Decimal('81500000'), '2022' : Decimal('82500000'), '2023' : Decimal('82500000'), '2024' : Decimal('88000000'), '2025' : Decimal('95500000')}
+
 headers = {
     "User-Agent": "EvanTradeValueProject/1.0 (contact: your_email@example.com)",
     "Accept": "text/html,application/json",
