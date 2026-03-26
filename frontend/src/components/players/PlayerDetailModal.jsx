@@ -197,7 +197,7 @@ function PlayerDetailModal({ player, isOpen, onClose }) {
                                             </thead>
                                             <tbody>
                                                 {predictions.map((row) => (
-                                                    <tr key={row.year}>
+                                                    <tr key={`${row.contract_id}-${row.year}`}>
                                                         <td>{row.year}</td>
                                                         <td>{formatCurrency(row.actual_cap_hit)}</td>
                                                         <td>{formatCurrency(row.expected_cap_hit)}</td>
