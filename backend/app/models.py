@@ -243,7 +243,6 @@ class Contract(Base):
     cap_hit = Column(Numeric(12, 2), nullable=False)
     rfa = Column(Boolean, nullable=False)
     elc = Column(Boolean, nullable=False)
-    cap_pct = Column(Numeric(5, 4), nullable=False)
     total_value = Column(Numeric(15, 2), nullable=True)
 
 
@@ -290,3 +289,15 @@ class BasicGoalieStats(Base):
     shutouts = Column(Integer, nullable=False)
     time_on_ice = Column(Integer, nullable=False)
 
+
+class PlayerSalary(Base):
+    """Player salary model matching player_salaries table schema"""
+    __tablename__ = "player_salaries"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    player_id = Column(Integer, ForeignKey("player_info.id", ondelete="CASCADE"), nullable=False)
+    contract_id = Column(Integer, ForeignKey("contracts.id", ondelete="CASCADE"), nullable=False)
+    year = Column(Integer, nullable=False)
+    cap_hit = Column(Numeric(12, 2), nullable=False)
+    cap_pct = Column(Numeric(5, 4), nullable=False)
+    

@@ -27,7 +27,6 @@ class Contract(BaseModel):
     cap_hit: Decimal
     rfa: bool
     elc: bool
-    cap_pct: Decimal
     total_value: Optional[Decimal] = None
     
     model_config = ConfigDict(from_attributes=True)

@@ -2,6 +2,8 @@ import sys
 import os
 import traceback
 import pandas as pd
+import io
+import requests
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
@@ -11,32 +13,35 @@ from decimal import Decimal
 from app.database import SessionLocal, init_db
 from app.models import Player, Contract, AdvancedSkaterStats
 
+headers = {
+    "User-Agent": "EvanTradeValueProject/1.0 (contact: your_email@example.com)",
+    "Accept": "text/html,application/json",
+}
+
 def load_skater_advanced_stats_csv():
     """Loads the skater advanced stats from the CSV file and saves them to the database"""
     
     all_dataframes = []
     
-    for i in range(3):
-        for j in range(10):
-            if (i == 0 and j > 7) or (i == 1) or (i == 2 and j < 6):
-                file_name = f"skaters20{i}{j}.csv"
-                file_path = os.path.join(os.path.dirname(__file__), 'data', 'skater advanced', file_name)
-                if os.path.exists(file_path):
-                    try:
-                        df = pd.read_csv(file_path)
-                        all_dataframes.append(df)
-                    except Exception as e:
-                        continue
-                else:
-                    continue
-            else:
-                continue
     
-    if all_dataframes:
-        combined_df = pd.concat(all_dataframes, ignore_index=True)
-        return combined_df
-    else:
-        return pd.DataFrame()
+    file_name = "skaters_2008_to_2024.csv"
+    file_path = os.path.join(os.path.dirname(__file__), 'data', 'skater advanced', file_name)
+    if os.path.exists(file_path):
+        try:
+            df = pd.read_csv(file_path)
+            all_dataframes.append(df)
+        except Exception as e:
+            return pd.DataFrame()
+        url = "https://moneypuck.com/moneypuck/playerData/seasonSummary/2025/regular/skaters.csv"
+        resp = requests.get(url, headers=headers, timeout=20)
+        resp.raise_for_status()
+        df = pd.read_csv(io.StringIO(resp.text))
+        all_dataframes.append(df)
+        if all_dataframes:
+            combined_df = pd.concat(all_dataframes, ignore_index=True)
+            return combined_df
+        else:
+            return pd.DataFrame()
 
 def parse_player_name(full_name: str):
     """Takes a full name and splits it into first and last name"""

@@ -10,15 +10,18 @@ from decimal import Decimal
 from app.database import SessionLocal, init_db
 from app.models import Player, Contract
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))) 
+
+SALARY_CAP ={'2005' : Decimal('39000000'), '2006' : Decimal('44000000'), '2007' : Decimal('50300000'), '2008' : Decimal('56700000'), 
+'2009' : Decimal('56800000'), '2010' : Decimal('59400000'), '2011' : Decimal('64300000'), '2012' : Decimal('70200000'), 
+'2013' : Decimal('64300000'), '2014' : Decimal('69000000'), '2015' : Decimal('71400000'), '2016' : Decimal('73000000'),
+'2017' : Decimal('75000000'), '2018' : Decimal('79500000'), '2019' : Decimal('81500000'), '2020' : Decimal('81500000'), 
+'2021' : Decimal('81500000'), '2022' : Decimal('82500000'), '2023' : Decimal('82500000'), '2024' : Decimal('88000000'), '2025' : Decimal('95500000')}
 
 headers = {
     "User-Agent": "EvanTradeValueProject/1.0 (contact: your_email@example.com)",
     "Accept": "text/html,application/json",
 }
-
-SALARY_CAP = Decimal('83500000')
-
 
 def parse_name(full_name: str):
     """Splits a full name into first and last name"""
@@ -118,8 +121,7 @@ def scrape_player_contracts(slug: str, team: str):
                 
                 contract_type = contract_item.get('type', '')
                 elc = 'ENTRY' in contract_type.upper() or 'ELC' in contract_type.upper()
-                
-                cap_pct = cap_hit / SALARY_CAP
+        
                 
                 contract_data = {
                     'team': contract_team,
@@ -129,7 +131,6 @@ def scrape_player_contracts(slug: str, team: str):
                     'cap_hit': cap_hit,
                     'rfa': rfa,
                     'elc': elc,
-                    'cap_pct': cap_pct,
                     'total_value': total_value,
                 }
                 
@@ -233,7 +234,6 @@ def save_contracts_to_db():
                     existing_contract.cap_hit = contract_data['cap_hit']
                     existing_contract.rfa = contract_data['rfa']
                     existing_contract.elc = contract_data['elc']
-                    existing_contract.cap_pct = contract_data['cap_pct']
                     existing_contract.total_value = contract_data['total_value']
                     contracts_updated += 1
                 else:
@@ -246,7 +246,6 @@ def save_contracts_to_db():
                         cap_hit=contract_data['cap_hit'],
                         rfa=contract_data['rfa'],
                         elc=contract_data['elc'],
-                        cap_pct=contract_data['cap_pct'],
                         total_value=contract_data['total_value'],
                     )
                     db.add(new_contract)

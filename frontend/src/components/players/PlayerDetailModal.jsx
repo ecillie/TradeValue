@@ -1,311 +1,215 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { getPlayerContracts, getPlayerStats, getPlayerContractPredictions } from '../../services/api';
-import { formatCurrency, formatSeason, formatPlayerName, formatNumber } from '../../utils/helpers';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { formatPlayerName, formatCurrency, formatSeason, formatPercentage } from '../../utils/helpers';
+import Button from '../common/Button';
 import './PlayerDetailModal.css';
 
 function PlayerDetailModal({ player, isOpen, onClose }) {
     const [contracts, setContracts] = useState([]);
     const [stats, setStats] = useState([]);
     const [predictions, setPredictions] = useState([]);
-    const [loadingContracts, setLoadingContracts] = useState(false);
-    const [loadingStats, setLoadingStats] = useState(false);
-    const [loadingPredictions, setLoadingPredictions] = useState(false);
+    const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
-    const [showPlayoffs, setShowPlayoffs] = useState(false); // Toggle for playoffs/regular season
-
-    const fetchPlayerData = useCallback(async () => {
-        if (!player) return;
-
-        try {
-            setError(null);
-            setLoadingContracts(true);
-            setLoadingStats(true);
-            setLoadingPredictions(true);
-
-            // Fetch contracts, stats, and predictions in parallel
-            const [contractsData, statsData, predictionsData] = await Promise.all([
-                getPlayerContracts(player.id),
-                getPlayerStats(player.id),
-                getPlayerContractPredictions(player.id).catch(() => []) // Don't fail if predictions fail
-            ]);
-
-            setContracts(contractsData);
-            setStats(statsData);
-            setPredictions(predictionsData);
-            console.log('Predictions data:', predictionsData); // Debug log
-        } catch (err) {
-            console.error('Error fetching player data:', err);
-            setError('Failed to load player data');
-        } finally {
-            setLoadingContracts(false);
-            setLoadingStats(false);
-            setLoadingPredictions(false);
-        }
-    }, [player]);
 
     useEffect(() => {
-        if (isOpen && player) {
-            fetchPlayerData();
+        if (!isOpen || !player?.id) {
+            return;
         }
-    }, [isOpen, player, fetchPlayerData]);
 
-    if (!isOpen || !player) return null;
+        let cancelled = false;
 
-    const playerName = formatPlayerName(player.firstname, player.lastname);
+        const load = async () => {
+            setLoading(true);
+            setError(null);
+            try {
+                const [contractsData, statsData, predictionsData] = await Promise.all([
+                    getPlayerContracts(player.id),
+                    getPlayerStats(player.id),
+                    getPlayerContractPredictions(player.id).catch(() => []),
+                ]);
+                if (!cancelled) {
+                    setContracts(Array.isArray(contractsData) ? contractsData : []);
+                    setStats(Array.isArray(statsData) ? statsData : []);
+                    setPredictions(Array.isArray(predictionsData) ? predictionsData : []);
+                }
+            } catch (e) {
+                if (!cancelled) {
+                    setError(e?.message || 'Failed to load player details');
+                    setContracts([]);
+                    setStats([]);
+                    setPredictions([]);
+                }
+            } finally {
+                if (!cancelled) {
+                    setLoading(false);
+                }
+            }
+        };
 
-    // Filter stats based on toggle
-    const filteredStats = stats.filter(stat => stat.playoff === showPlayoffs);
-    
-    // Sort by season (newest first)
-    const sortedStats = [...filteredStats].sort((a, b) => {
-        if (a.season !== b.season) return b.season - a.season;
-        return a.team.localeCompare(b.team);
-    });
+        load();
+        return () => {
+            cancelled = true;
+        };
+    }, [isOpen, player?.id]);
 
-    // Calculate aggregated totals
-    const aggregatedTotals = filteredStats.reduce((acc, stat) => {
-        acc.gp += stat.gp || 0;
-        acc.goals += stat.goals || 0;
-        acc.assists += stat.assists || 0;
-        acc.points += stat.points || 0;
-        acc.plus_minus += stat.plus_minus || 0;
-        acc.pim += stat.pim || 0;
-        acc.shots += stat.shots || 0;
-        return acc;
-    }, {
-        gp: 0,
-        goals: 0,
-        assists: 0,
-        points: 0,
-        plus_minus: 0,
-        pim: 0,
-        shots: 0
-    });
+    useEffect(() => {
+        const onKeyDown = (e) => {
+            if (e.key === 'Escape' && isOpen) {
+                onClose();
+            }
+        };
+        window.addEventListener('keydown', onKeyDown);
+        return () => window.removeEventListener('keydown', onKeyDown);
+    }, [isOpen, onClose]);
 
-    // Calculate shooting percentage
-    const shootingPct = aggregatedTotals.shots > 0 
-        ? ((aggregatedTotals.goals / aggregatedTotals.shots) * 100).toFixed(1)
-        : '0.0';
+    if (!isOpen || !player) {
+        return null;
+    }
 
-    // Sort contracts by start year (newest first)
-    const sortedContracts = [...contracts].sort((a, b) => b.start_year - a.start_year);
-
-    // Calculate contract aggregates
-    const contractTotals = contracts.reduce((acc, contract) => {
-        acc.totalValue += parseFloat(contract.total_value || 0);
-        acc.totalCapHit += parseFloat(contract.cap_hit || 0);
-        acc.totalDuration += contract.duration || 0;
-        return acc;
-    }, {
-        totalValue: 0,
-        totalCapHit: 0,
-        totalDuration: 0
-    });
-
-    const avgCapHit = contracts.length > 0 ? contractTotals.totalCapHit / contracts.length : 0;
-    const avgDuration = contracts.length > 0 ? contractTotals.totalDuration / contracts.length : 0;
-
-    // Sort predictions by year to ensure proper display
-    const sortedPredictions = [...predictions].sort((a, b) => a.year - b.year);
+    const fullName = formatPlayerName(player.firstname, player.lastname);
 
     return (
-        <div className="modal-overlay" onClick={onClose}>
-            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-                <div className="modal-header">
-                    <h2>{playerName}</h2>
-                    <button className="modal-close" onClick={onClose}>&times;</button>
+        <div
+            className="player-detail-modal-backdrop"
+            role="presentation"
+            onClick={onClose}
+        >
+            <div
+                className="player-detail-modal-panel"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="player-detail-modal-title"
+                onClick={(e) => e.stopPropagation()}
+            >
+                <div className="player-detail-modal-header">
+                    <div>
+                        <h2 id="player-detail-modal-title">{fullName}</h2>
+                        <p className="player-detail-modal-meta">
+                            {player.team} · {player.position} · Age {player.age}
+                        </p>
+                    </div>
+                    <Button type="button" variant="secondary" onClick={onClose} aria-label="Close">
+                        Close
+                    </Button>
                 </div>
 
-                <div className="modal-body">
-                    {/* Player Info */}
-                    <div className="player-info-section">
-                        <div className="info-row">
-                            <span className="info-label">Team:</span>
-                            <span className="info-value">{player.team}</span>
-                        </div>
-                        <div className="info-row">
-                            <span className="info-label">Position:</span>
-                            <span className="info-value">{player.position}</span>
-                        </div>
-                        <div className="info-row">
-                            <span className="info-label">Age:</span>
-                            <span className="info-value">{player.age}</span>
-                        </div>
-                    </div>
+                <div className="player-detail-modal-body">
+                    {loading && <div className="player-detail-modal-status">Loading…</div>}
+                    {error && <div className="player-detail-modal-error">{error}</div>}
 
-                    {/* Contracts Section */}
-                    <div className="section">
-                        <h3>Contracts ({contracts.length})</h3>
-                        {loadingContracts ? (
-                            <div className="loading">Loading contracts...</div>
-                        ) : error ? (
-                            <div className="error">{error}</div>
-                        ) : contracts.length === 0 ? (
-                            <div className="empty-state">No contracts found</div>
-                        ) : (
-                            <div className="contracts-table-wrapper">
-                                <table className="contracts-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Season</th>
-                                            <th>Team</th>
-                                            <th>Duration</th>
-                                            <th>Cap Hit</th>
-                                            <th>Total Value</th>
-                                            <th>Cap %</th>
-                                            <th>Type</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {sortedContracts.map((contract) => (
-                                            <tr key={contract.id}>
-                                                <td>{formatSeason(contract.start_year)} - {formatSeason(contract.end_year)}</td>
-                                                <td>{contract.team}</td>
-                                                <td>{contract.duration} {contract.duration === 1 ? 'year' : 'years'}</td>
-                                                <td>{formatCurrency(contract.cap_hit)}</td>
-                                                <td>{contract.total_value ? formatCurrency(contract.total_value) : '-'}</td>
-                                                <td>{(parseFloat(contract.cap_pct) * 100).toFixed(2)}%</td>
-                                                <td>
-                                                    <div className="contract-badges">
-                                                        {contract.elc && <span className="contract-badge elc">ELC</span>}
-                                                        {contract.rfa && <span className="contract-badge rfa">RFA</span>}
-                                                        {!contract.elc && !contract.rfa && <span className="contract-badge ufa">UFA</span>}
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                    <tfoot>
-                                        <tr className="totals-row">
-                                            <td colSpan="2"><strong>Totals ({contracts.length} contracts)</strong></td>
-                                            <td><strong>{avgDuration.toFixed(1)} avg years</strong></td>
-                                            <td><strong>{formatCurrency(avgCapHit)} avg</strong></td>
-                                            <td><strong>{formatCurrency(contractTotals.totalValue)}</strong></td>
-                                            <td colSpan="2"></td>
-                                        </tr>
-                                    </tfoot>
-                                </table>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Contract Predictions Chart */}
-                    {sortedPredictions.length > 0 && (
-                        <div className="section">
-                            <h3>Actual vs Expected Cap Hit (By Year)</h3>
-                            {loadingPredictions ? (
-                                <div className="loading">Loading predictions...</div>
-                            ) : (
-                                <div className="chart-container">
-                                    <ResponsiveContainer width="100%" height={400}>
-                                        <BarChart
-                                            data={sortedPredictions}
-                                            margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
-                                        >
-                                            <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-                                            <XAxis
-                                                dataKey="year"
-                                                stroke="#888"
-                                                tickFormatter={(value) => value.toString()}
-                                            />
-                                            <YAxis
-                                                tickFormatter={(value) => `$${(value / 1000000).toFixed(1)}M`}
-                                                stroke="#888"
-                                            />
-                                            <Tooltip
-                                                formatter={(value) => formatCurrency(value)}
-                                                labelFormatter={(value) => `Year: ${value}`}
-                                                labelStyle={{ color: '#333' }}
-                                                contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '4px' }}
-                                            />
-                                            <Legend />
-                                            <Bar dataKey="actual_cap_hit" fill="#646cff" name="Actual Cap Hit" />
-                                            <Bar dataKey="expected_cap_hit" fill="#10b981" name="Expected Cap Hit" />
-                                        </BarChart>
-                                    </ResponsiveContainer>
-                                </div>
-                            )}
-                        </div>
-                    )}
-
-                    {/* Statistics Section */}
-                    <div className="section">
-                        <div className="stats-header">
-                            <h3>Statistics</h3>
-                            <div className="season-toggle">
-                                <button 
-                                    className={`toggle-btn ${!showPlayoffs ? 'active' : ''}`}
-                                    onClick={() => setShowPlayoffs(false)}
-                                >
-                                    Regular Season
-                                </button>
-                                <button 
-                                    className={`toggle-btn ${showPlayoffs ? 'active' : ''}`}
-                                    onClick={() => setShowPlayoffs(true)}
-                                >
-                                    Playoffs
-                                </button>
-                            </div>
-                        </div>
-                        {loadingStats ? (
-                            <div className="loading">Loading statistics...</div>
-                        ) : error ? (
-                            <div className="error">{error}</div>
-                        ) : sortedStats.length === 0 ? (
-                            <div className="empty-state">No {showPlayoffs ? 'playoff' : 'regular season'} statistics found</div>
-                        ) : (
-                            <>
-                                <div className="stats-table-wrapper">
-                                    <table className="stats-table">
-                                        <thead>
-                                            <tr>
-                                                <th>Season</th>
-                                                <th>Team</th>
-                                                <th>GP</th>
-                                                <th>G</th>
-                                                <th>A</th>
-                                                <th>P</th>
-                                                <th>+/-</th>
-                                                <th>PIM</th>
-                                                <th>S</th>
-                                                <th>S%</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {sortedStats.map((stat) => (
-                                                <tr key={stat.id}>
-                                                    <td>{formatSeason(stat.season)}</td>
-                                                    <td>{stat.team}</td>
-                                                    <td>{formatNumber(stat.gp)}</td>
-                                                    <td>{formatNumber(stat.goals)}</td>
-                                                    <td>{formatNumber(stat.assists)}</td>
-                                                    <td>{formatNumber(stat.points)}</td>
-                                                    <td>{formatNumber(stat.plus_minus)}</td>
-                                                    <td>{formatNumber(stat.pim)}</td>
-                                                    <td>{formatNumber(stat.shots)}</td>
-                                                    <td>{Number(stat.shootpct).toFixed(1)}%</td>
+                    {!loading && !error && (
+                        <>
+                            <section className="player-detail-modal-section">
+                                <h3>Contracts ({contracts.length})</h3>
+                                {contracts.length === 0 ? (
+                                    <p className="player-detail-modal-empty">No contracts</p>
+                                ) : (
+                                    <div className="player-detail-modal-table-wrap">
+                                        <table className="player-detail-modal-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Team</th>
+                                                    <th>Years</th>
+                                                    <th>Duration</th>
+                                                    <th>Cap hit</th>
+                                                    <th>Total value</th>
+                                                    <th>Type</th>
                                                 </tr>
-                                            ))}
-                                        </tbody>
-                                        <tfoot>
-                                            <tr className="totals-row">
-                                                <td colSpan="2"><strong>Totals</strong></td>
-                                                <td><strong>{formatNumber(aggregatedTotals.gp)}</strong></td>
-                                                <td><strong>{formatNumber(aggregatedTotals.goals)}</strong></td>
-                                                <td><strong>{formatNumber(aggregatedTotals.assists)}</strong></td>
-                                                <td><strong>{formatNumber(aggregatedTotals.points)}</strong></td>
-                                                <td><strong>{formatNumber(aggregatedTotals.plus_minus)}</strong></td>
-                                                <td><strong>{formatNumber(aggregatedTotals.pim)}</strong></td>
-                                                <td><strong>{formatNumber(aggregatedTotals.shots)}</strong></td>
-                                                <td><strong>{shootingPct}%</strong></td>
-                                            </tr>
-                                        </tfoot>
-                                    </table>
-                                </div>
-                            </>
-                        )}
-                    </div>
+                                            </thead>
+                                            <tbody>
+                                                {contracts.map((c) => (
+                                                    <tr key={c.id}>
+                                                        <td>{c.team}</td>
+                                                        <td>
+                                                            {c.start_year}–{c.end_year}
+                                                        </td>
+                                                        <td>{c.duration}</td>
+                                                        <td>{formatCurrency(Number(c.cap_hit))}</td>
+                                                        <td>
+                                                            {c.total_value != null
+                                                                ? formatCurrency(Number(c.total_value))
+                                                                : '—'}
+                                                        </td>
+                                                        <td>
+                                                            {[c.rfa && 'RFA', c.elc && 'ELC']
+                                                                .filter(Boolean)
+                                                                .join(', ') || '—'}
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
+                            </section>
+
+                            <section className="player-detail-modal-section">
+                                <h3>Basic stats ({stats.length})</h3>
+                                {stats.length === 0 ? (
+                                    <p className="player-detail-modal-empty">No stats</p>
+                                ) : (
+                                    <div className="player-detail-modal-table-wrap">
+                                        <table className="player-detail-modal-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Season</th>
+                                                    <th>Playoff</th>
+                                                    <th>Team</th>
+                                                    <th>GP</th>
+                                                    <th>G</th>
+                                                    <th>A</th>
+                                                    <th>Pts</th>
+                                                    <th>+/-</th>
+                                                    <th>SO%</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {stats.map((s) => (
+                                                    <tr key={s.id}>
+                                                        <td>{formatSeason(s.season)}</td>
+                                                        <td>{s.playoff ? 'Yes' : 'No'}</td>
+                                                        <td>{s.team}</td>
+                                                        <td>{s.gp}</td>
+                                                        <td>{s.goals}</td>
+                                                        <td>{s.assists}</td>
+                                                        <td>{s.points}</td>
+                                                        <td>{s.plus_minus}</td>
+                                                        <td>{formatPercentage(Number(s.shootpct))}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
+                            </section>
+
+                            {predictions.length > 0 && (
+                                <section className="player-detail-modal-section">
+                                    <h3>Contract predictions (by year)</h3>
+                                    <div className="player-detail-modal-table-wrap">
+                                        <table className="player-detail-modal-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Year</th>
+                                                    <th>Actual cap hit</th>
+                                                    <th>Expected cap hit</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {predictions.map((row) => (
+                                                    <tr key={`${row.contract_id}-${row.year}`}>
+                                                        <td>{row.year}</td>
+                                                        <td>{formatCurrency(row.actual_cap_hit)}</td>
+                                                        <td>{formatCurrency(row.expected_cap_hit)}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </section>
+                            )}
+                        </>
+                    )}
                 </div>
             </div>
         </div>
@@ -313,4 +217,3 @@ function PlayerDetailModal({ player, isOpen, onClose }) {
 }
 
 export default PlayerDetailModal;
-

@@ -6,3 +6,5 @@ frontend/package-lock.json
 backend/app/ml/artifacts/*.pkl
 .env
 backend/.pytest_cache/
+frontend/dist/
+.DS_Store.DS_Store

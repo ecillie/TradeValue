@@ -3,9 +3,15 @@ from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from typing import List, Optional
 from pydantic import BaseModel
-from decimal import Decimal
 from app.database import get_db
-from app.models import Player as PlayerModel, Contract as ContractModel, BasicPlayerStats, AdvancedSkaterStats, AdvancedGoalieStats
+from app.models import (
+    Player as PlayerModel,
+    Contract as ContractModel,
+    BasicPlayerStats,
+    AdvancedSkaterStats,
+    AdvancedGoalieStats,
+    PlayerSalary,
+)
 from app.schemas import Player, Contract, BasicPlayerStats as StatsSchema
 from app.ml.inference.predictor import predict
 import pandas as pd
@@ -109,10 +115,11 @@ class YearPrediction(BaseModel):
     year: int
     actual_cap_hit: float
     expected_cap_hit: float
+    contract_id: int
 
 @router.get("/{player_id}/contract-predictions", response_model=List[YearPrediction])
 def get_player_contract_predictions(player_id: int, db: Session = Depends(get_db)):
-    """Get actual vs expected cap hit predictions aggregated by year for all of a player's contracts"""
+    """Actual cap hits from player_salaries by year; expected from ML per contract (joined via contract_id)."""
     player = db.query(PlayerModel).filter(PlayerModel.id == player_id).first()
     if not player:
         raise HTTPException(status_code=404, detail=f"Player with id {player_id} not found")
@@ -130,8 +137,7 @@ def get_player_contract_predictions(player_id: int, db: Session = Depends(get_db
     else:
         model_name = 'forward_model'
     
-    # First, get predictions for each contract
-    contract_predictions = []
+    expected_by_contract_id: dict[int, float] = {}
     
     for contract in contracts:
         # Get stats for this contract
@@ -225,6 +231,9 @@ def get_player_contract_predictions(player_id: int, db: Session = Depends(get_db
                 stats_dict['losses'] = 0
                 stats_dict['ot_losses'] = 0
                 stats_dict['shutouts'] = 0
+            stats_dict['age'] = int(player.age) if player.age is not None else 0
+            stats_dict['duration'] = int(contract.duration) if contract.duration is not None else 0
+            stats_dict['rfa'] = bool(contract.rfa)
         else:
             # Skater stats
             stats_query = db.query(
@@ -238,6 +247,8 @@ def get_player_contract_predictions(player_id: int, db: Session = Depends(get_db
                 AdvancedSkaterStats.i_f_shots_on_goal,
                 AdvancedSkaterStats.i_f_unblocked_shot_attempts,
                 AdvancedSkaterStats.on_ice_x_goals_percentage,
+                AdvancedSkaterStats.on_ice_corsi_percentage,
+                AdvancedSkaterStats.on_ice_fenwick_percentage,
                 AdvancedSkaterStats.shots_blocked_by_player,
                 AdvancedSkaterStats.i_f_takeaways,
                 AdvancedSkaterStats.i_f_giveaways,
@@ -267,6 +278,8 @@ def get_player_contract_predictions(player_id: int, db: Session = Depends(get_db
                 'i_f_shots_on_goal': int(stats_query.i_f_shots_on_goal) if stats_query.i_f_shots_on_goal else 0,
                 'i_f_unblocked_shot_attempts': int(stats_query.i_f_unblocked_shot_attempts) if stats_query.i_f_unblocked_shot_attempts else 0,
                 'on_ice_x_goals_percentage': float(stats_query.on_ice_x_goals_percentage) if stats_query.on_ice_x_goals_percentage else 0,
+                'on_ice_corsi_percentage': float(stats_query.on_ice_corsi_percentage) if stats_query.on_ice_corsi_percentage else 0,
+                'on_ice_fenwick_percentage': float(stats_query.on_ice_fenwick_percentage) if stats_query.on_ice_fenwick_percentage else 0,
                 'shots_blocked_by_player': int(stats_query.shots_blocked_by_player) if stats_query.shots_blocked_by_player else 0,
                 'i_f_takeaways': int(stats_query.i_f_takeaways) if stats_query.i_f_takeaways else 0,
                 'i_f_giveaways': int(stats_query.i_f_giveaways) if stats_query.i_f_giveaways else 0,
@@ -275,60 +288,40 @@ def get_player_contract_predictions(player_id: int, db: Session = Depends(get_db
                 'i_f_o_zone_shift_starts': int(stats_query.i_f_o_zone_shift_starts) if stats_query.i_f_o_zone_shift_starts else 0,
                 'i_f_d_zone_shift_starts': int(stats_query.i_f_d_zone_shift_starts) if stats_query.i_f_d_zone_shift_starts else 0,
                 'i_f_neutral_zone_shift_starts': int(stats_query.i_f_neutral_zone_shift_starts) if stats_query.i_f_neutral_zone_shift_starts else 0,
+                'age': int(player.age) if player.age is not None else 0,
+                'duration': int(contract.duration) if contract.duration is not None else 0,
+                'rfa': bool(contract.rfa),
             }
         
         try:
-            # Make prediction
             df = pd.DataFrame([stats_dict])
             result_df = predict(df, model_name=model_name)
             expected_cap_hit = float(result_df['predicted_cap_hit'].iloc[0])
-            
-            contract_predictions.append({
-                'contract': contract,
-                'actual_cap_hit': float(contract.cap_hit),
-                'expected_cap_hit': expected_cap_hit
-            })
-        except Exception as e:
-            # Skip contracts where prediction fails
+            expected_by_contract_id[contract.id] = expected_cap_hit
+        except Exception:
             continue
     
-    # Now aggregate by year
-    if not contract_predictions:
+    salary_rows = (
+        db.query(PlayerSalary)
+        .filter(PlayerSalary.player_id == player_id)
+        .order_by(PlayerSalary.year, PlayerSalary.contract_id)
+        .all()
+    )
+    if not salary_rows:
         return []
     
-    # Find all years covered by contracts
-    all_years = set()
-    for cp in contract_predictions:
-        contract = cp['contract']
-        for year in range(contract.start_year, contract.end_year + 1):
-            all_years.add(year)
-    
-    # Aggregate cap hits by year
-    year_data = {}
-    for year in sorted(all_years):
-        year_data[year] = {
-            'actual_cap_hit': 0.0,
-            'expected_cap_hit': 0.0
-        }
-    
-    # Sum up cap hits for each year from all active contracts
-    for cp in contract_predictions:
-        contract = cp['contract']
-        actual = cp['actual_cap_hit']
-        expected = cp['expected_cap_hit']
-        
-        for year in range(contract.start_year, contract.end_year + 1):
-            year_data[year]['actual_cap_hit'] += actual
-            year_data[year]['expected_cap_hit'] += expected
-    
-    # Convert to list of YearPrediction objects
-    predictions = [
-        YearPrediction(
-            year=year,
-            actual_cap_hit=data['actual_cap_hit'],
-            expected_cap_hit=data['expected_cap_hit']
+    predictions = []
+    for row in salary_rows:
+        try:
+            year_int = int(row.year)
+        except (TypeError, ValueError):
+            continue
+        predictions.append(
+            YearPrediction(
+                year=year_int,
+                actual_cap_hit=float(row.cap_hit) if row.cap_hit is not None else 0.0,
+                expected_cap_hit=expected_by_contract_id.get(row.contract_id, 0.0),
+                contract_id=row.contract_id,
+            )
         )
-        for year, data in sorted(year_data.items())
-    ]
-    
     return predictions
