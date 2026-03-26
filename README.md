@@ -303,9 +303,3 @@ The backend connects to PostgreSQL. Configure connection in `backend/app/config.
 
 Tests can be added to verify data scraping, model training, and API endpoints.
 
-## Notes
-
-- The application scrapes data from public APIs. Respect rate limits and terms of service.
-- Models are trained on historical data and may not reflect current market conditions.
-- Contract predictions are estimates based on statistical analysis and should not be considered financial advice.
-
