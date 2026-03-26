@@ -208,6 +208,14 @@ Scrape player statistics from NHL API:
 python3 -m app.ScriptingFiles.save_basic_player_stats
 ```
 
+### Building Player Salaries (Contract-Year)
+
+Creates `player_salaries` rows for each contract and each contract-year (used as ML labels and for “actual” cap hit in the predictions UI/API):
+```bash
+cd backend
+python3 -m app.ScriptingFiles.save_individual_contract_years
+```
+
 Note: The NHL API has rate limits. The scripts include delays and retry logic to handle this.
 
 ## Machine Learning Pipeline
@@ -221,17 +229,30 @@ python3 -m app.ml.training.train_player_model
 ```
 
 This will:
-- Load player data from the database
-- Build features from historical statistics
-- Train separate models for forwards and defensemen
+- Load player/contract/stats/salary data from PostgreSQL
+- Build one training row per **non-ELC contract** aligned to the contract **start year**
+- Use `player_salaries.cap_hit` as the label (`log_cap_hit = log1p(cap_hit)`)
+- Train separate models:
+- `forward_model`
+- `defenseman_model`
+- `goalie_model`
 - Save models to `backend/app/ml/artifacts/`
+
+Dataset joins are in `backend/app/ml/data/dataset_builder.py`, and feature engineering is in `backend/app/ml/data/features.py`.
 
 ### Evaluating Models
 
-Evaluate trained models:
+`evaluate_model()` returns metrics (it does not print by default). To print results:
 ```bash
-python3 -m app.ml.training.evaluate
+cd backend
+python3 -c "from app.ml.training.evaluate import evaluate_model; print('Forward:', evaluate_model('forward_model')); print('Defenseman:', evaluate_model('defenseman_model')); print('Goalie:', evaluate_model('goalie_model'))"
 ```
+
+### Contract Predictions (“Actual vs Expected”)
+
+`GET /api/players/{player_id}/contract-predictions` returns rows with:
+- `actual_cap_hit`: sourced from `player_salaries.cap_hit` for that `(player_id, contract_id, year)`
+- `expected_cap_hit`: sourced from the ML prediction keyed by `contract_id`
 
 ### Making Predictions
 
@@ -248,6 +269,9 @@ Use the prediction API endpoint or the web interface to make predictions based o
 - `GET /api/players/contracts` - Get all contracts
 - `GET /api/players/contracts/{id}` - Get contract by ID
 - `GET /api/players/{player_id}/contracts` - Get contracts for a player
+
+### Contract Predictions
+- `GET /api/players/{player_id}/contract-predictions` - Actual vs expected cap hit by year
 
 ### Statistics
 - `GET /api/players/{player_id}/stats` - Get player statistics (query params: season, team, playoff)

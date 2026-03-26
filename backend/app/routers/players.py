@@ -231,6 +231,9 @@ def get_player_contract_predictions(player_id: int, db: Session = Depends(get_db
                 stats_dict['losses'] = 0
                 stats_dict['ot_losses'] = 0
                 stats_dict['shutouts'] = 0
+            stats_dict['age'] = int(player.age) if player.age is not None else 0
+            stats_dict['duration'] = int(contract.duration) if contract.duration is not None else 0
+            stats_dict['rfa'] = bool(contract.rfa)
         else:
             # Skater stats
             stats_query = db.query(
@@ -244,6 +247,8 @@ def get_player_contract_predictions(player_id: int, db: Session = Depends(get_db
                 AdvancedSkaterStats.i_f_shots_on_goal,
                 AdvancedSkaterStats.i_f_unblocked_shot_attempts,
                 AdvancedSkaterStats.on_ice_x_goals_percentage,
+                AdvancedSkaterStats.on_ice_corsi_percentage,
+                AdvancedSkaterStats.on_ice_fenwick_percentage,
                 AdvancedSkaterStats.shots_blocked_by_player,
                 AdvancedSkaterStats.i_f_takeaways,
                 AdvancedSkaterStats.i_f_giveaways,
@@ -273,6 +278,8 @@ def get_player_contract_predictions(player_id: int, db: Session = Depends(get_db
                 'i_f_shots_on_goal': int(stats_query.i_f_shots_on_goal) if stats_query.i_f_shots_on_goal else 0,
                 'i_f_unblocked_shot_attempts': int(stats_query.i_f_unblocked_shot_attempts) if stats_query.i_f_unblocked_shot_attempts else 0,
                 'on_ice_x_goals_percentage': float(stats_query.on_ice_x_goals_percentage) if stats_query.on_ice_x_goals_percentage else 0,
+                'on_ice_corsi_percentage': float(stats_query.on_ice_corsi_percentage) if stats_query.on_ice_corsi_percentage else 0,
+                'on_ice_fenwick_percentage': float(stats_query.on_ice_fenwick_percentage) if stats_query.on_ice_fenwick_percentage else 0,
                 'shots_blocked_by_player': int(stats_query.shots_blocked_by_player) if stats_query.shots_blocked_by_player else 0,
                 'i_f_takeaways': int(stats_query.i_f_takeaways) if stats_query.i_f_takeaways else 0,
                 'i_f_giveaways': int(stats_query.i_f_giveaways) if stats_query.i_f_giveaways else 0,
@@ -281,6 +288,9 @@ def get_player_contract_predictions(player_id: int, db: Session = Depends(get_db
                 'i_f_o_zone_shift_starts': int(stats_query.i_f_o_zone_shift_starts) if stats_query.i_f_o_zone_shift_starts else 0,
                 'i_f_d_zone_shift_starts': int(stats_query.i_f_d_zone_shift_starts) if stats_query.i_f_d_zone_shift_starts else 0,
                 'i_f_neutral_zone_shift_starts': int(stats_query.i_f_neutral_zone_shift_starts) if stats_query.i_f_neutral_zone_shift_starts else 0,
+                'age': int(player.age) if player.age is not None else 0,
+                'duration': int(contract.duration) if contract.duration is not None else 0,
+                'rfa': bool(contract.rfa),
             }
         
         try:
