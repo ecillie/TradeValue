@@ -50,7 +50,7 @@ def save_individual_contract_years():
                 
                 salary_cap = SALARY_CAP[year_str]                
                 
-                cap_hit = contract.total_value / contract.duration if contract.total_value and contract.duration > 0 else Decimal('0')
+                cap_hit = contract.cap_hit 
                 cap_pct = cap_hit / salary_cap if salary_cap > 0 else Decimal('0')
 
                 player_salary = PlayerSalary(

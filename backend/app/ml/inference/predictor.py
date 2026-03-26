@@ -30,47 +30,82 @@ def load_model(model_name: str = 'forward_model'):
 
 def prepare_skater_features_for_prediction(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Prepare skater features for prediction (same as training but without cap_hit/log_cap_hit)
-    Input DataFrame should have the same columns as build_skater_advanced_dataset returns
+    Same transforms as skater_data_to_features (no cap_hit / log_cap_hit).
+    Expects columns from build_skater_advanced_dataset, including age, duration, rfa, Corsi/Fenwick.
     """
     df = df.copy()
-    
-    # Filter by minimum icetime (same as training)
-    if 'icetime' in df.columns:
-        df = df[df['icetime'] > 300 * 60].copy()
-    
-    # Feature engineering (same as skater_data_to_features but without log_cap_hit)
-    df['minutes_played'] = df['icetime'] / 60.0
-    df['goals_per_60'] = df['i_f_goals'] / df['minutes_played']
-    df['primary_assists_per_60'] = df['i_f_primary_assists'] / df['minutes_played']
-    df['secondary_assists_per_60'] = df['i_f_secondary_assists'] / df['minutes_played']
-    df['points_per_60'] = df['i_f_points'] / df['minutes_played']
-    df['goals_above_expected'] = df['i_f_goals'] - df['i_f_x_goals']
-    df['shots_per_60'] = df['i_f_unblocked_shot_attempts'] / df['minutes_played']
-    df['xGoals_percentage'] = df['on_ice_x_goals_percentage']
-    df['net_penalties_per_60'] = (df['penalties_drawn'] - df['i_f_penalties']) / df['minutes_played']
-    df['blocks_per_60'] = df['shots_blocked_by_player'] / df['minutes_played']
-    df['takeaways_per_60'] = df['i_f_takeaways'] / df['minutes_played']
-    df['giveaways_per_60'] = df['i_f_giveaways'] / df['minutes_played']
-    
-    total_starts = (df['i_f_o_zone_shift_starts'] + 
-                    df['i_f_d_zone_shift_starts'] + 
-                    df['i_f_neutral_zone_shift_starts'])
-    df['o_zone_start_pct'] = df['i_f_o_zone_shift_starts'] / total_starts.replace(0, np.nan)
-    
-    # Drop the same columns as in training
+
+    if "icetime" in df.columns:
+        df = df[df["icetime"] > 300 * 60].copy()
+
+    df["minutes_played"] = df["icetime"] / 60.0
+    df["goals_per_60"] = df["i_f_goals"] / df["minutes_played"]
+    df["primary_assists_per_60"] = df["i_f_primary_assists"] / df["minutes_played"]
+    df["secondary_assists_per_60"] = df["i_f_secondary_assists"] / df["minutes_played"]
+    df["points_per_60"] = df["i_f_points"] / df["minutes_played"]
+    df["goals_above_expected"] = df["i_f_goals"] - df["i_f_x_goals"]
+    df["shots_per_60"] = df["i_f_unblocked_shot_attempts"] / df["minutes_played"]
+    df["xGoals_percentage"] = df["on_ice_x_goals_percentage"]
+    df["net_penalties_per_60"] = (df["penalties_drawn"] - df["i_f_penalties"]) / df["minutes_played"]
+    df["blocks_per_60"] = df["shots_blocked_by_player"] / df["minutes_played"]
+    df["takeaways_per_60"] = df["i_f_takeaways"] / df["minutes_played"]
+    df["giveaways_per_60"] = df["i_f_giveaways"] / df["minutes_played"]
+
+    total_starts = (
+        df["i_f_o_zone_shift_starts"]
+        + df["i_f_d_zone_shift_starts"]
+        + df["i_f_neutral_zone_shift_starts"]
+    )
+    df["o_zone_start_pct"] = df["i_f_o_zone_shift_starts"] / total_starts.replace(0, np.nan)
+
+    df["log_icetime"] = np.log1p(df["icetime"].astype(float).clip(lower=0))
+    if "rfa" in df.columns:
+        df["rfa_flag"] = df["rfa"].fillna(False).astype(int)
+    else:
+        df["rfa_flag"] = 0
+    if "age" not in df.columns:
+        df["age"] = 0
+    else:
+        df["age"] = pd.to_numeric(df["age"], errors="coerce").fillna(0)
+    if "duration" not in df.columns:
+        df["duration"] = 0
+    else:
+        df["duration"] = pd.to_numeric(df["duration"], errors="coerce").fillna(0)
+    for col in ("on_ice_corsi_percentage", "on_ice_fenwick_percentage"):
+        if col not in df.columns:
+            df[col] = 0.0
+
     drop_cols = [
-        'i_f_goals', 'i_f_primary_assists', 'i_f_secondary_assists', 'i_f_points',
-        'i_f_x_goals', 'i_f_shots_on_goal', 'i_f_unblocked_shot_attempts',
-        'i_f_penalties', 'penalties_drawn', 
-        'i_f_takeaways', 'i_f_giveaways', 'shots_blocked_by_player',
-        'icetime', 'minutes_played', 'cap_hit',
-        'i_f_o_zone_shift_starts', 'i_f_d_zone_shift_starts', 'i_f_neutral_zone_shift_starts',
-        'player_id', 'season', 'contract_id', 'id'
+        "i_f_goals",
+        "i_f_primary_assists",
+        "i_f_secondary_assists",
+        "i_f_points",
+        "i_f_x_goals",
+        "i_f_shots_on_goal",
+        "i_f_unblocked_shot_attempts",
+        "i_f_penalties",
+        "penalties_drawn",
+        "i_f_takeaways",
+        "i_f_giveaways",
+        "shots_blocked_by_player",
+        "icetime",
+        "minutes_played",
+        "cap_hit",
+        "cap_pct",
+        "log_cap_hit",
+        "rfa",
+        "on_ice_x_goals_percentage",
+        "i_f_o_zone_shift_starts",
+        "i_f_d_zone_shift_starts",
+        "i_f_neutral_zone_shift_starts",
+        "player_id",
+        "season",
+        "contract_id",
+        "id",
     ]
-    df = df.drop(columns=[col for col in drop_cols if col in df.columns], errors='ignore')
+    df = df.drop(columns=[col for col in drop_cols if col in df.columns], errors="ignore")
     df = df.fillna(0)
-    
+
     return df
 
 
@@ -95,12 +130,25 @@ def prepare_goalie_features_for_prediction(df: pd.DataFrame) -> pd.DataFrame:
     df['freeze_performance_ratio'] = df['act_freeze'] / df['x_freeze'].replace(0, np.nan)
     df['shots_faced_per_60'] = df['unblocked_shot_attempts'] / df['minutes_played']
     df['avg_shot_difficulty'] = df['x_goals'] / df['unblocked_shot_attempts'].replace(0, np.nan)
-    
-    # Drop the same columns as in training
+
+    df["log_icetime"] = np.log1p(df["icetime"].astype(float).clip(lower=0))
+    if "rfa" in df.columns:
+        df["rfa_flag"] = df["rfa"].fillna(False).astype(int)
+    else:
+        df["rfa_flag"] = 0
+    if "age" not in df.columns:
+        df["age"] = 0
+    else:
+        df["age"] = pd.to_numeric(df["age"], errors="coerce").fillna(0)
+    if "duration" not in df.columns:
+        df["duration"] = 0
+    else:
+        df["duration"] = pd.to_numeric(df["duration"], errors="coerce").fillna(0)
+
     cols_to_drop = [
-        'id', 'season', 'team', 'playoff', 
-        'goals', 'x_goals', 'cap_hit', 
-        'rebounds', 'x_rebounds', 
+        'id', 'season', 'team', 'playoff',
+        'goals', 'x_goals', 'cap_hit', 'cap_pct', 'log_cap_hit', 'rfa',
+        'rebounds', 'x_rebounds',
         'act_freeze', 'x_freeze',
         'icetime', 'minutes_played',
         'player_id', 'contract_id'
@@ -122,7 +170,7 @@ def predict(df: pd.DataFrame, model_name: str = 'forward_model') -> pd.DataFrame
         model_name: Name of the model to use ('forward_model', 'defenseman_model', or 'goalie_model')
     
     Returns:
-        DataFrame with predictions added as 'predicted_log_cap_hit' and 'predicted_cap_hit' columns
+        DataFrame with 'predicted_log_cap_hit' (log1p USD) and 'predicted_cap_hit' (expm1, dollars)
     """
     model, expected_features = load_model(model_name)
     
@@ -141,10 +189,7 @@ def predict(df: pd.DataFrame, model_name: str = 'forward_model') -> pd.DataFrame
     # Select features in the correct order
     df_features = df_features[expected_features]
     
-    # Make predictions (returns log_cap_hit)
     predicted_log_cap_hit = model.predict(df_features)
-    
-    # Convert back to cap_hit (inverse of log1p)
     predicted_cap_hit = np.expm1(predicted_log_cap_hit)
     
     # Add predictions to result
