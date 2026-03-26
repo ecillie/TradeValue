@@ -7,10 +7,6 @@ from sklearn.ensemble import HistGradientBoostingRegressor
 
 from app.ml.data.dataset_builder import build_forward_dataset, build_defenseman_dataset, build_goalie_dataset
 from app.ml.data.features import skater_data_to_features, goalie_data_to_features
-from sklearn.linear_model import RidgeCV
-from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import r2_score, mean_absolute_error
-
 
 # Test using cd /Users/evancillie/Documents/GitHub/TradeValue/backend
 # DB_HOST=localhost python3 -m app.ml.training.train_player_model
@@ -66,8 +62,8 @@ def train_player_model(df: pd.DataFrame, model_name: str = "player_model"):
         "min_samples_leaf": [10, 20, 50],
         "l2_regularization": [0.0, 0.1, 1.0],
     }
+
     
-    print(f"Tuning {model_name} hyperparameters... (This may take a minute)")
     search = RandomizedSearchCV(
         gbm,
         param_distributions,
@@ -80,7 +76,13 @@ def train_player_model(df: pd.DataFrame, model_name: str = "player_model"):
     )
     search.fit(X_train, y_train, groups=groups_train)
     best_model = search.best_estimator_
-    print(f"Best Params for {model_name}: {search.best_params_}")
+
+    test_pred = best_model.predict(X_test)
+    mae_log = float(np.mean(np.abs(y_test.values - test_pred)))
+    mae_dollars = float(
+        np.mean(np.abs(np.expm1(y_test.values) - np.expm1(test_pred)))
+    )
+
     if not os.path.exists(ARTIFACTS_DIR):
         os.makedirs(ARTIFACTS_DIR)
     model_path = os.path.join(ARTIFACTS_DIR, f"{model_name}.pkl")
