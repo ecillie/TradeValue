@@ -300,4 +300,5 @@ class PlayerSalary(Base):
     year = Column(Integer, nullable=False)
     cap_hit = Column(Numeric(12, 2), nullable=False)
     cap_pct = Column(Numeric(5, 4), nullable=False)
+    is_slide = Column(Boolean, nullable=False, default=False)
     
