@@ -8,6 +8,7 @@ from app.models import (
     Player as PlayerModel,
     Contract as ContractModel,
     BasicPlayerStats,
+    BasicGoalieStats,
     AdvancedSkaterStats,
     AdvancedGoalieStats,
     PlayerSalary,
@@ -118,32 +119,18 @@ class YearPrediction(BaseModel):
     contract_id: int
     is_slide: bool = False
 
-@router.get("/{player_id}/contract-predictions", response_model=List[YearPrediction])
-def get_player_contract_predictions(player_id: int, db: Session = Depends(get_db)):
-    """Actual cap hits from player_salaries by year; expected from ML per contract (joined via contract_id)."""
-    player = db.query(PlayerModel).filter(PlayerModel.id == player_id).first()
-    if not player:
-        raise HTTPException(status_code=404, detail=f"Player with id {player_id} not found")
-    
-    contracts = db.query(ContractModel).filter(ContractModel.player_id == player_id).all()
-    if not contracts:
-        return []
-    
-    # Determine position and model name
-    position = player.position.lower()
-    if 'd' in position:
-        model_name = 'defenseman_model'
-    elif 'g' in position:
-        model_name = 'goalie_model'
-    else:
-        model_name = 'forward_model'
-    
-    expected_by_contract_id: dict[int, float] = {}
-    
-    for contract in contracts:
-        # Get stats for this contract
-        if model_name == 'goalie_model':
-            stats_query = db.query(
+
+def _stats_dict_for_contract_season(
+    db: Session,
+    contract: ContractModel,
+    player: PlayerModel,
+    model_name: str,
+    season: int,
+) -> Optional[dict]:
+    """Load advanced (and basic goalie) stats for contract and NHL season; None if no advanced row."""
+    if model_name == "goalie_model":
+        stats_query = (
+            db.query(
                 AdvancedGoalieStats.icetime,
                 AdvancedGoalieStats.x_goals,
                 AdvancedGoalieStats.goals,
@@ -171,137 +158,216 @@ def get_player_contract_predictions(player_id: int, db: Session = Depends(get_db
                 AdvancedGoalieStats.low_danger_goals,
                 AdvancedGoalieStats.medium_danger_goals,
                 AdvancedGoalieStats.high_danger_goals,
-            ).filter(
+            )
+            .filter(
                 AdvancedGoalieStats.contract_id == contract.id,
-                AdvancedGoalieStats.situation == 'all',
+                AdvancedGoalieStats.situation == "all",
                 AdvancedGoalieStats.playoff == False,
-                AdvancedGoalieStats.season == contract.start_year
-            ).first()
-            
-            if not stats_query:
-                continue
-                
-            # Convert to dict for DataFrame
-            stats_dict = {
-                'icetime': float(stats_query.icetime) if stats_query.icetime else 0,
-                'x_goals': float(stats_query.x_goals) if stats_query.x_goals else 0,
-                'goals': float(stats_query.goals) if stats_query.goals else 0,
-                'unblocked_shot_attempts': int(stats_query.unblocked_shot_attempts) if stats_query.unblocked_shot_attempts else 0,
-                'blocked_shot_attempts': int(stats_query.blocked_shot_attempts) if stats_query.blocked_shot_attempts else 0,
-                'x_rebounds': float(stats_query.x_rebounds) if stats_query.x_rebounds else 0,
-                'rebounds': int(stats_query.rebounds) if stats_query.rebounds else 0,
-                'x_freeze': float(stats_query.x_freeze) if stats_query.x_freeze else 0,
-                'act_freeze': int(stats_query.act_freeze) if stats_query.act_freeze else 0,
-                'x_on_goal': float(stats_query.x_on_goal) if stats_query.x_on_goal else 0,
-                'on_goal': int(stats_query.on_goal) if stats_query.on_goal else 0,
-                'x_play_stopped': float(stats_query.x_play_stopped) if stats_query.x_play_stopped else 0,
-                'play_stopped': int(stats_query.play_stopped) if stats_query.play_stopped else 0,
-                'x_play_continued_in_zone': float(stats_query.x_play_continued_in_zone) if stats_query.x_play_continued_in_zone else 0,
-                'play_continued_in_zone': int(stats_query.play_continued_in_zone) if stats_query.play_continued_in_zone else 0,
-                'x_play_continued_outside_zone': float(stats_query.x_play_continued_outside_zone) if stats_query.x_play_continued_outside_zone else 0,
-                'play_continued_outside_zone': int(stats_query.play_continued_outside_zone) if stats_query.play_continued_outside_zone else 0,
-                'flurry_adjusted_x_goals': float(stats_query.flurry_adjusted_x_goals) if stats_query.flurry_adjusted_x_goals else 0,
-                'low_danger_shots': int(stats_query.low_danger_shots) if stats_query.low_danger_shots else 0,
-                'medium_danger_shots': int(stats_query.medium_danger_shots) if stats_query.medium_danger_shots else 0,
-                'high_danger_shots': int(stats_query.high_danger_shots) if stats_query.high_danger_shots else 0,
-                'low_danger_x_goals': float(stats_query.low_danger_x_goals) if stats_query.low_danger_x_goals else 0,
-                'medium_danger_x_goals': float(stats_query.medium_danger_x_goals) if stats_query.medium_danger_x_goals else 0,
-                'high_danger_x_goals': float(stats_query.high_danger_x_goals) if stats_query.high_danger_x_goals else 0,
-                'low_danger_goals': int(stats_query.low_danger_goals) if stats_query.low_danger_goals else 0,
-                'medium_danger_goals': int(stats_query.medium_danger_goals) if stats_query.medium_danger_goals else 0,
-                'high_danger_goals': int(stats_query.high_danger_goals) if stats_query.high_danger_goals else 0,
-            }
-            
-            # Get basic goalie stats
-            from app.models import BasicGoalieStats
-            basic_stats = db.query(BasicGoalieStats).filter(
+                AdvancedGoalieStats.season == season,
+            )
+            .first()
+        )
+        if not stats_query:
+            return None
+        stats_dict = {
+            "icetime": float(stats_query.icetime) if stats_query.icetime else 0,
+            "x_goals": float(stats_query.x_goals) if stats_query.x_goals else 0,
+            "goals": float(stats_query.goals) if stats_query.goals else 0,
+            "unblocked_shot_attempts": int(stats_query.unblocked_shot_attempts)
+            if stats_query.unblocked_shot_attempts
+            else 0,
+            "blocked_shot_attempts": int(stats_query.blocked_shot_attempts)
+            if stats_query.blocked_shot_attempts
+            else 0,
+            "x_rebounds": float(stats_query.x_rebounds) if stats_query.x_rebounds else 0,
+            "rebounds": int(stats_query.rebounds) if stats_query.rebounds else 0,
+            "x_freeze": float(stats_query.x_freeze) if stats_query.x_freeze else 0,
+            "act_freeze": int(stats_query.act_freeze) if stats_query.act_freeze else 0,
+            "x_on_goal": float(stats_query.x_on_goal) if stats_query.x_on_goal else 0,
+            "on_goal": int(stats_query.on_goal) if stats_query.on_goal else 0,
+            "x_play_stopped": float(stats_query.x_play_stopped) if stats_query.x_play_stopped else 0,
+            "play_stopped": int(stats_query.play_stopped) if stats_query.play_stopped else 0,
+            "x_play_continued_in_zone": float(stats_query.x_play_continued_in_zone)
+            if stats_query.x_play_continued_in_zone
+            else 0,
+            "play_continued_in_zone": int(stats_query.play_continued_in_zone)
+            if stats_query.play_continued_in_zone
+            else 0,
+            "x_play_continued_outside_zone": float(stats_query.x_play_continued_outside_zone)
+            if stats_query.x_play_continued_outside_zone
+            else 0,
+            "play_continued_outside_zone": int(stats_query.play_continued_outside_zone)
+            if stats_query.play_continued_outside_zone
+            else 0,
+            "flurry_adjusted_x_goals": float(stats_query.flurry_adjusted_x_goals)
+            if stats_query.flurry_adjusted_x_goals
+            else 0,
+            "low_danger_shots": int(stats_query.low_danger_shots) if stats_query.low_danger_shots else 0,
+            "medium_danger_shots": int(stats_query.medium_danger_shots)
+            if stats_query.medium_danger_shots
+            else 0,
+            "high_danger_shots": int(stats_query.high_danger_shots) if stats_query.high_danger_shots else 0,
+            "low_danger_x_goals": float(stats_query.low_danger_x_goals) if stats_query.low_danger_x_goals else 0,
+            "medium_danger_x_goals": float(stats_query.medium_danger_x_goals)
+            if stats_query.medium_danger_x_goals
+            else 0,
+            "high_danger_x_goals": float(stats_query.high_danger_x_goals)
+            if stats_query.high_danger_x_goals
+            else 0,
+            "low_danger_goals": int(stats_query.low_danger_goals) if stats_query.low_danger_goals else 0,
+            "medium_danger_goals": int(stats_query.medium_danger_goals)
+            if stats_query.medium_danger_goals
+            else 0,
+            "high_danger_goals": int(stats_query.high_danger_goals) if stats_query.high_danger_goals else 0,
+        }
+        basic_stats = (
+            db.query(BasicGoalieStats)
+            .filter(
                 BasicGoalieStats.contract_id == contract.id,
                 BasicGoalieStats.playoff == False,
-                BasicGoalieStats.season == contract.start_year
-            ).first()
-            
-            if basic_stats:
-                stats_dict['gp'] = int(basic_stats.gp) if basic_stats.gp else 0
-                stats_dict['wins'] = int(basic_stats.wins) if basic_stats.wins else 0
-                stats_dict['losses'] = int(basic_stats.losses) if basic_stats.losses else 0
-                stats_dict['ot_losses'] = int(basic_stats.ot_losses) if basic_stats.ot_losses else 0
-                stats_dict['shutouts'] = int(basic_stats.shutouts) if basic_stats.shutouts else 0
-            else:
-                stats_dict['gp'] = 0
-                stats_dict['wins'] = 0
-                stats_dict['losses'] = 0
-                stats_dict['ot_losses'] = 0
-                stats_dict['shutouts'] = 0
-            stats_dict['age'] = int(player.age) if player.age is not None else 0
-            stats_dict['duration'] = int(contract.duration) if contract.duration is not None else 0
-            stats_dict['rfa'] = bool(contract.rfa)
+                BasicGoalieStats.season == season,
+            )
+            .first()
+        )
+        if basic_stats:
+            stats_dict["gp"] = int(basic_stats.gp) if basic_stats.gp else 0
+            stats_dict["wins"] = int(basic_stats.wins) if basic_stats.wins else 0
+            stats_dict["losses"] = int(basic_stats.losses) if basic_stats.losses else 0
+            stats_dict["ot_losses"] = int(basic_stats.ot_losses) if basic_stats.ot_losses else 0
+            stats_dict["shutouts"] = int(basic_stats.shutouts) if basic_stats.shutouts else 0
         else:
-            # Skater stats
-            stats_query = db.query(
-                AdvancedSkaterStats.icetime,
-                AdvancedSkaterStats.games_played,
-                AdvancedSkaterStats.i_f_points,
-                AdvancedSkaterStats.i_f_goals,
-                AdvancedSkaterStats.i_f_primary_assists,
-                AdvancedSkaterStats.i_f_secondary_assists,
-                AdvancedSkaterStats.i_f_x_goals,
-                AdvancedSkaterStats.i_f_shots_on_goal,
-                AdvancedSkaterStats.i_f_unblocked_shot_attempts,
-                AdvancedSkaterStats.on_ice_x_goals_percentage,
-                AdvancedSkaterStats.on_ice_corsi_percentage,
-                AdvancedSkaterStats.on_ice_fenwick_percentage,
-                AdvancedSkaterStats.shots_blocked_by_player,
-                AdvancedSkaterStats.i_f_takeaways,
-                AdvancedSkaterStats.i_f_giveaways,
-                AdvancedSkaterStats.i_f_penalties,
-                AdvancedSkaterStats.penalties_drawn,
-                AdvancedSkaterStats.i_f_o_zone_shift_starts,
-                AdvancedSkaterStats.i_f_d_zone_shift_starts,
-                AdvancedSkaterStats.i_f_neutral_zone_shift_starts,
-            ).filter(
-                AdvancedSkaterStats.contract_id == contract.id,
-                AdvancedSkaterStats.situation == 'all',
-                AdvancedSkaterStats.playoff == False,
-                AdvancedSkaterStats.season == contract.start_year
-            ).first()
-            
-            if not stats_query:
-                continue
-                
-            stats_dict = {
-                'icetime': float(stats_query.icetime) if stats_query.icetime else 0,
-                'games_played': int(stats_query.games_played) if stats_query.games_played else 0,
-                'i_f_points': int(stats_query.i_f_points) if stats_query.i_f_points else 0,
-                'i_f_goals': int(stats_query.i_f_goals) if stats_query.i_f_goals else 0,
-                'i_f_primary_assists': int(stats_query.i_f_primary_assists) if stats_query.i_f_primary_assists else 0,
-                'i_f_secondary_assists': int(stats_query.i_f_secondary_assists) if stats_query.i_f_secondary_assists else 0,
-                'i_f_x_goals': float(stats_query.i_f_x_goals) if stats_query.i_f_x_goals else 0,
-                'i_f_shots_on_goal': int(stats_query.i_f_shots_on_goal) if stats_query.i_f_shots_on_goal else 0,
-                'i_f_unblocked_shot_attempts': int(stats_query.i_f_unblocked_shot_attempts) if stats_query.i_f_unblocked_shot_attempts else 0,
-                'on_ice_x_goals_percentage': float(stats_query.on_ice_x_goals_percentage) if stats_query.on_ice_x_goals_percentage else 0,
-                'on_ice_corsi_percentage': float(stats_query.on_ice_corsi_percentage) if stats_query.on_ice_corsi_percentage else 0,
-                'on_ice_fenwick_percentage': float(stats_query.on_ice_fenwick_percentage) if stats_query.on_ice_fenwick_percentage else 0,
-                'shots_blocked_by_player': int(stats_query.shots_blocked_by_player) if stats_query.shots_blocked_by_player else 0,
-                'i_f_takeaways': int(stats_query.i_f_takeaways) if stats_query.i_f_takeaways else 0,
-                'i_f_giveaways': int(stats_query.i_f_giveaways) if stats_query.i_f_giveaways else 0,
-                'i_f_penalties': int(stats_query.i_f_penalties) if stats_query.i_f_penalties else 0,
-                'penalties_drawn': int(stats_query.penalties_drawn) if stats_query.penalties_drawn else 0,
-                'i_f_o_zone_shift_starts': int(stats_query.i_f_o_zone_shift_starts) if stats_query.i_f_o_zone_shift_starts else 0,
-                'i_f_d_zone_shift_starts': int(stats_query.i_f_d_zone_shift_starts) if stats_query.i_f_d_zone_shift_starts else 0,
-                'i_f_neutral_zone_shift_starts': int(stats_query.i_f_neutral_zone_shift_starts) if stats_query.i_f_neutral_zone_shift_starts else 0,
-                'age': int(player.age) if player.age is not None else 0,
-                'duration': int(contract.duration) if contract.duration is not None else 0,
-                'rfa': bool(contract.rfa),
-            }
-        
+            stats_dict["gp"] = 0
+            stats_dict["wins"] = 0
+            stats_dict["losses"] = 0
+            stats_dict["ot_losses"] = 0
+            stats_dict["shutouts"] = 0
+        stats_dict["age"] = int(player.age) if player.age is not None else 0
+        stats_dict["duration"] = int(contract.duration) if contract.duration is not None else 0
+        stats_dict["rfa"] = bool(contract.rfa)
+        return stats_dict
+
+    stats_query = (
+        db.query(
+            AdvancedSkaterStats.icetime,
+            AdvancedSkaterStats.games_played,
+            AdvancedSkaterStats.i_f_points,
+            AdvancedSkaterStats.i_f_goals,
+            AdvancedSkaterStats.i_f_primary_assists,
+            AdvancedSkaterStats.i_f_secondary_assists,
+            AdvancedSkaterStats.i_f_x_goals,
+            AdvancedSkaterStats.i_f_shots_on_goal,
+            AdvancedSkaterStats.i_f_unblocked_shot_attempts,
+            AdvancedSkaterStats.on_ice_x_goals_percentage,
+            AdvancedSkaterStats.on_ice_corsi_percentage,
+            AdvancedSkaterStats.on_ice_fenwick_percentage,
+            AdvancedSkaterStats.shots_blocked_by_player,
+            AdvancedSkaterStats.i_f_takeaways,
+            AdvancedSkaterStats.i_f_giveaways,
+            AdvancedSkaterStats.i_f_penalties,
+            AdvancedSkaterStats.penalties_drawn,
+            AdvancedSkaterStats.i_f_o_zone_shift_starts,
+            AdvancedSkaterStats.i_f_d_zone_shift_starts,
+            AdvancedSkaterStats.i_f_neutral_zone_shift_starts,
+        )
+        .filter(
+            AdvancedSkaterStats.contract_id == contract.id,
+            AdvancedSkaterStats.situation == "all",
+            AdvancedSkaterStats.playoff == False,
+            AdvancedSkaterStats.season == season,
+        )
+        .first()
+    )
+    if not stats_query:
+        return None
+    return {
+        "icetime": float(stats_query.icetime) if stats_query.icetime else 0,
+        "games_played": int(stats_query.games_played) if stats_query.games_played else 0,
+        "i_f_points": int(stats_query.i_f_points) if stats_query.i_f_points else 0,
+        "i_f_goals": int(stats_query.i_f_goals) if stats_query.i_f_goals else 0,
+        "i_f_primary_assists": int(stats_query.i_f_primary_assists) if stats_query.i_f_primary_assists else 0,
+        "i_f_secondary_assists": int(stats_query.i_f_secondary_assists)
+        if stats_query.i_f_secondary_assists
+        else 0,
+        "i_f_x_goals": float(stats_query.i_f_x_goals) if stats_query.i_f_x_goals else 0,
+        "i_f_shots_on_goal": int(stats_query.i_f_shots_on_goal) if stats_query.i_f_shots_on_goal else 0,
+        "i_f_unblocked_shot_attempts": int(stats_query.i_f_unblocked_shot_attempts)
+        if stats_query.i_f_unblocked_shot_attempts
+        else 0,
+        "on_ice_x_goals_percentage": float(stats_query.on_ice_x_goals_percentage)
+        if stats_query.on_ice_x_goals_percentage
+        else 0,
+        "on_ice_corsi_percentage": float(stats_query.on_ice_corsi_percentage)
+        if stats_query.on_ice_corsi_percentage
+        else 0,
+        "on_ice_fenwick_percentage": float(stats_query.on_ice_fenwick_percentage)
+        if stats_query.on_ice_fenwick_percentage
+        else 0,
+        "shots_blocked_by_player": int(stats_query.shots_blocked_by_player)
+        if stats_query.shots_blocked_by_player
+        else 0,
+        "i_f_takeaways": int(stats_query.i_f_takeaways) if stats_query.i_f_takeaways else 0,
+        "i_f_giveaways": int(stats_query.i_f_giveaways) if stats_query.i_f_giveaways else 0,
+        "i_f_penalties": int(stats_query.i_f_penalties) if stats_query.i_f_penalties else 0,
+        "penalties_drawn": int(stats_query.penalties_drawn) if stats_query.penalties_drawn else 0,
+        "i_f_o_zone_shift_starts": int(stats_query.i_f_o_zone_shift_starts)
+        if stats_query.i_f_o_zone_shift_starts
+        else 0,
+        "i_f_d_zone_shift_starts": int(stats_query.i_f_d_zone_shift_starts)
+        if stats_query.i_f_d_zone_shift_starts
+        else 0,
+        "i_f_neutral_zone_shift_starts": int(stats_query.i_f_neutral_zone_shift_starts)
+        if stats_query.i_f_neutral_zone_shift_starts
+        else 0,
+        "age": int(player.age) if player.age is not None else 0,
+        "duration": int(contract.duration) if contract.duration is not None else 0,
+        "rfa": bool(contract.rfa),
+    }
+
+
+def _predict_cap_hit_from_stats_dict(stats_dict: dict, model_name: str) -> float:
+    df = pd.DataFrame([stats_dict])
+    result_df = predict(df, model_name=model_name)
+    return float(result_df["predicted_cap_hit"].iloc[0])
+
+
+@router.get("/{player_id}/contract-predictions", response_model=List[YearPrediction])
+def get_player_contract_predictions(player_id: int, db: Session = Depends(get_db)):
+    """Actual cap hits from player_salaries by year.
+
+    Expected cap hit uses the ML model with advanced stats for that salary year
+    (season == year); falls back to the signing-year (contract.start_year) prediction
+    when that season's stats are missing or prediction fails.
+    """
+    player = db.query(PlayerModel).filter(PlayerModel.id == player_id).first()
+    if not player:
+        raise HTTPException(status_code=404, detail=f"Player with id {player_id} not found")
+
+    contracts = db.query(ContractModel).filter(ContractModel.player_id == player_id).all()
+    if not contracts:
+        return []
+
+    position = player.position.lower()
+    if "d" in position:
+        model_name = "defenseman_model"
+    elif "g" in position:
+        model_name = "goalie_model"
+    else:
+        model_name = "forward_model"
+
+    fallback_by_contract_id: dict[int, float] = {}
+    for contract in contracts:
+        stats_dict = _stats_dict_for_contract_season(
+            db, contract, player, model_name, int(contract.start_year)
+        )
+        if stats_dict is None:
+            continue
         try:
-            df = pd.DataFrame([stats_dict])
-            result_df = predict(df, model_name=model_name)
-            expected_cap_hit = float(result_df['predicted_cap_hit'].iloc[0])
-            expected_by_contract_id[contract.id] = expected_cap_hit
+            fallback_by_contract_id[contract.id] = _predict_cap_hit_from_stats_dict(
+                stats_dict, model_name
+            )
         except Exception:
             continue
-    
+
     salary_rows = (
         db.query(PlayerSalary)
         .filter(PlayerSalary.player_id == player_id)
@@ -310,18 +376,55 @@ def get_player_contract_predictions(player_id: int, db: Session = Depends(get_db
     )
     if not salary_rows:
         return []
-    
+
+    contracts_by_id = {c.id: c for c in contracts}
+    salary_year_pairs: set[tuple[int, int]] = set()
+    for row in salary_rows:
+        if row.is_slide:
+            continue
+        try:
+            year_int = int(row.year)
+        except (TypeError, ValueError):
+            continue
+        salary_year_pairs.add((row.contract_id, year_int))
+
+    expected_by_contract_year: dict[tuple[int, int], float] = {}
+    for contract_id, year_int in salary_year_pairs:
+        contract = contracts_by_id.get(contract_id)
+        if contract is None:
+            continue
+        fb = fallback_by_contract_id.get(contract_id, 0.0)
+        stats_dict = _stats_dict_for_contract_season(
+            db, contract, player, model_name, year_int
+        )
+        if stats_dict is None:
+            expected_by_contract_year[(contract_id, year_int)] = fb
+            continue
+        try:
+            expected_by_contract_year[(contract_id, year_int)] = _predict_cap_hit_from_stats_dict(
+                stats_dict, model_name
+            )
+        except Exception:
+            expected_by_contract_year[(contract_id, year_int)] = fb
+
     predictions = []
     for row in salary_rows:
         try:
             year_int = int(row.year)
         except (TypeError, ValueError):
             continue
+        if row.is_slide:
+            expected = 0.0
+        else:
+            expected = expected_by_contract_year.get(
+                (row.contract_id, year_int),
+                fallback_by_contract_id.get(row.contract_id, 0.0),
+            )
         predictions.append(
             YearPrediction(
                 year=year_int,
                 actual_cap_hit=float(row.cap_hit) if row.cap_hit is not None else 0.0,
-                expected_cap_hit=0.0 if row.is_slide else expected_by_contract_id.get(row.contract_id, 0.0),
+                expected_cap_hit=expected,
                 contract_id=row.contract_id,
                 is_slide=bool(getattr(row, "is_slide", False)),
             )
