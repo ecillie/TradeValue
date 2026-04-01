@@ -26,7 +26,7 @@ DB_HOST = _resolve_db_host()
 DB_PORT = os.getenv("DB_PORT", "5432")
 DB_NAME = os.getenv("DB_NAME")
 
-if not DB_USER or not DB_NAME:
+if not DB_USER or not DB_NAME:  # pragma: no cover
     raise RuntimeError("DB_USER or DB_NAME missing from .env")
 
 if DB_PASS:

@@ -61,8 +61,18 @@ def sample_contract_data():
         "cap_hit": Decimal("12500000"),
         "rfa": False,
         "elc": False,
+        "total_value": Decimal("100000000"),
+    }
+
+
+@pytest.fixture
+def sample_player_salary_data():
+    """Per-year salary row (player_id / contract_id set in test after insert)."""
+    return {
+        "year": 2023,
+        "cap_hit": Decimal("12500000"),
         "cap_pct": Decimal("0.1497"),
-        "total_value": Decimal("100000000")
+        "is_slide": False,
     }
 
 
@@ -83,4 +93,26 @@ def sample_stats_data():
         "pim": 18,
         "shots": 352,
         "shootpct": Decimal("18.18")
+    }
+
+
+@pytest.fixture
+def sample_defenseman_player_data():
+    return {
+        "firstname": "Cale",
+        "lastname": "Makar",
+        "team": "COL",
+        "position": "D",
+        "age": 26,
+    }
+
+
+@pytest.fixture
+def sample_goalie_player_data():
+    return {
+        "firstname": "Igor",
+        "lastname": "Shesterkin",
+        "team": "NYR",
+        "position": "G",
+        "age": 29,
     }
