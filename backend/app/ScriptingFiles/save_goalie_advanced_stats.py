@@ -12,6 +12,9 @@ from decimal import Decimal
 
 from app.database import SessionLocal, init_db
 from app.models import Player, Contract, AdvancedGoalieStats
+
+# cd backend && DB_HOST=localhost python3 -m app.ScriptingFiles.save_goalie_advanced_stats
+
 headers = {
     "User-Agent": "EvanTradeValueProject/1.0 (contact: your_email@example.com)",
     "Accept": "text/html,application/json",
