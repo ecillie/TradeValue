@@ -48,7 +48,10 @@ TradeValue/
 │   │   ├── database.py            # Database setup
 │   │   ├── models.py              # SQLAlchemy models
 │   │   └── main.py                # FastAPI application
+│   ├── tests/                     # Pytest suite (API, ML, config/database)
 │   ├── Dockerfile
+│   ├── pytest.ini
+│   ├── .coveragerc
 │   └── requirements.txt
 ├── frontend/
 │   ├── src/
@@ -116,7 +119,7 @@ The ML pipeline and `/contract-predictions` use **`advanced_skater_stats`** and 
 
 ### Environment Variables
 
-Variables are read in `backend/app/config.py` (`DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT`, `DB_NAME`). The app loads **`backend/.env`** via `python-dotenv`.
+Variables are read in `backend/app/config.py` (`DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT`, `DB_NAME`). The app loads **`backend/.env`** via `python-dotenv`. `DB_USER` and `DB_NAME` are required. If `DB_PASSWORD` is unset or empty, the database URL is built **without** a password segment (useful only if your Postgres accepts that connection mode).
 
 - **Docker Compose**: Put credentials in a **project root** `.env` file so Compose can substitute `${DB_USER}`, `${DB_PASSWORD}`, and `${DB_NAME}` into the backend service environment (see `docker-compose.yml`). The backend container also receives `DB_HOST=host.docker.internal` so it can reach PostgreSQL on the host machine.
 - **Local backend** (`uvicorn` on your machine): Use **`backend/.env`** with the same keys. For local runs, `DB_HOST=localhost` is typical. If `DB_HOST` is `host.docker.internal` and you are not in Docker, `config.py` rewrites it to `localhost`.
@@ -334,5 +337,19 @@ The backend connects to PostgreSQL. Configure connection in `backend/app/config.
 
 ### Running Tests
 
-Tests can be added to verify data scraping, model training, and API endpoints.
+From the `backend` directory, with dependencies installed (`pip install -r requirements.txt` includes `pytest` and `pytest-cov`):
+
+```bash
+cd backend
+source venv/bin/activate   # if you use a venv
+pytest
+```
+
+Options:
+
+- **Coverage**: `pytest --cov=app --cov-report=term-missing`
+- **Single file**: `pytest tests/test_players.py`
+- **Verbose / traceback**: configured in `pytest.ini` (`-v --tb=short`)
+
+Scraping scripts under `app/ScriptingFiles/` are omitted from coverage runs via `backend/.coveragerc`; lines marked with `# pragma: no cover` are excluded from coverage reports.
 
