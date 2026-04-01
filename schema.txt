@@ -1,20 +1,4 @@
-player_salaries
-   Column    |     Type      | Collation | Nullable |                   Default                   
--------------+---------------+-----------+----------+---------------------------------------------
- id          | integer       |           | not null | nextval('player_salaries_id_seq'::regclass)
- player_id   | integer       |           |          | 
- contract_id | integer       |           |          | 
- year        | integer       |           | not null | 
- cap_hit     | numeric(12,2) |           | not null | 
- cap_pct     | numeric(5,4)  |           | not null | 
-Indexes:
-    "player_salaries_pkey" PRIMARY KEY, btree (id)
-    "player_salaries_contract_id_year_key" UNIQUE CONSTRAINT, btree (contract_id, year)
-Foreign-key constraints:
-    "player_salaries_contract_id_fkey" FOREIGN KEY (contract_id) REFERENCES contracts(id) ON DELETE CASCADE
-    "player_salaries_player_id_fkey" FOREIGN KEY (player_id) REFERENCES player_info(id) ON DELETE CASCADE
-
-advanced_skater_stats
+ Table "public.advanced_skater_stats"
                            Column                            |         Type          | Collation | Nullable |                      Default                      
 -------------------------------------------------------------+-----------------------+-----------+----------+---------------------------------------------------
  id                                                          | integer               |           | not null | nextval('advanced_skater_stats_id_seq'::regclass)
@@ -174,15 +158,15 @@ advanced_skater_stats
  fenwick_against_after_shifts                                | integer               |           |          | 
 Indexes:
     "advanced_skater_stats_pkey" PRIMARY KEY, btree (id)
-    "advanced_skater_stats_player_id_contract_id_season_playoff__key" UNIQUE CONSTRAINT, btree (player_id, contract_id, season, pla
-yoff, situation)
+    "advanced_skater_stats_player_id_contract_id_season_playoff__key" UNIQUE CONSTRAINT, btree (player_id, contract_id, season, playoff, situation)
 Foreign-key constraints:
     "advanced_skater_stats_contract_id_fkey" FOREIGN KEY (contract_id) REFERENCES contracts(id) ON DELETE CASCADE
     "advanced_skater_stats_player_id_fkey" FOREIGN KEY (player_id) REFERENCES player_info(id) ON DELETE CASCADE
     "fk_advanced_skater_stats_contract" FOREIGN KEY (contract_id) REFERENCES contracts(id) ON DELETE CASCADE
     "fk_advanced_skater_stats_player" FOREIGN KEY (player_id) REFERENCES player_info(id) ON DELETE CASCADE
 
-advanced_goalie_stats
+
+                                               Table "public.advanced_goalie_stats"
             Column             |         Type          | Collation | Nullable |                      Default                      
 -------------------------------+-----------------------+-----------+----------+---------------------------------------------------
  id                            | integer               |           | not null | nextval('advanced_goalie_stats_id_seq'::regclass)
@@ -221,16 +205,14 @@ advanced_goalie_stats
  high_danger_goals             | integer               |           |          | 
 Indexes:
     "advanced_goalie_stats_pkey" PRIMARY KEY, btree (id)
-    "advanced_goalie_stats_player_id_contract_id_season_playoff__key" UNIQUE CONSTRAINT, btree (player_id, contract_id, season, playoff, situati
-on)
+    "advanced_goalie_stats_player_id_contract_id_season_playoff__key" UNIQUE CONSTRAINT, btree (player_id, contract_id, season, playoff, situation)
 Foreign-key constraints:
     "advanced_goalie_stats_contract_id_fkey" FOREIGN KEY (contract_id) REFERENCES contracts(id) ON DELETE CASCADE
     "advanced_goalie_stats_player_id_fkey" FOREIGN KEY (player_id) REFERENCES player_info(id) ON DELETE CASCADE
     "fk_advanced_goalie_stats_contract" FOREIGN KEY (contract_id) REFERENCES contracts(id) ON DELETE CASCADE
     "fk_advanced_goalie_stats_player" FOREIGN KEY (player_id) REFERENCES player_info(id) ON DELETE CASCADE
 
-
-basic_goalie_stats
+                                           Table "public.basic_goalie_stats"
         Column         |         Type          | Collation | Nullable |                    Default                     
 -----------------------+-----------------------+-----------+----------+------------------------------------------------
  id                    | integer               |           | not null | nextval('basic_goalie_stats_id_seq'::regclass)
@@ -256,7 +238,7 @@ Foreign-key constraints:
     "fk_basic_goalie_stats_contract" FOREIGN KEY (contract_id) REFERENCES contracts(id) ON DELETE CASCADE
     "fk_basic_goalie_stats_player" FOREIGN KEY (player_id) REFERENCES player_info(id) ON DELETE CASCADE
 
-basic_player_stats
+                                      Table "public.basic_player_stats"
    Column    |         Type          | Collation | Nullable |                    Default                     
 -------------+-----------------------+-----------+----------+------------------------------------------------
  id          | integer               |           | not null | nextval('basic_player_stats_id_seq'::regclass)
@@ -279,7 +261,7 @@ Foreign-key constraints:
     "fk_stats_contract" FOREIGN KEY (contract_id) REFERENCES contracts(id) ON DELETE CASCADE
     "fk_stats_player" FOREIGN KEY (player_id) REFERENCES player_info(id) ON DELETE CASCADE
 
-contracts
+                                      Table "public.contracts"
    Column    |         Type          | Collation | Nullable |                Default                
 -------------+-----------------------+-----------+----------+---------------------------------------
  id          | integer               |           | not null | nextval('contracts_id_seq'::regclass)
@@ -290,16 +272,40 @@ contracts
  duration    | integer               |           | not null | 
  rfa         | boolean               |           | not null | 
  elc         | boolean               |           | not null | 
- cap_hit     | numeric(12,2)         |           |          | 
  total_value | numeric(15,2)         |           |          | 
+ cap_hit     | numeric(12,2)         |           |          | 
+ cap_pct     | numeric(5,4)          |           | not null | 0
 Indexes:
     "contracts_pkey" PRIMARY KEY, btree (id)
 Foreign-key constraints:
     "contracts_player_id_fkey" FOREIGN KEY (player_id) REFERENCES player_info(id) ON DELETE CASCADE
 Referenced by:
-    TABLE "basic_player_stats" CONSTRAINT "fk_stats_contract" FOREIGN KEY (contract_id) REFERENCES contracts(id) ON DELETE CASCADE        
+    TABLE "advanced_goalie_stats" CONSTRAINT "advanced_goalie_stats_contract_id_fkey" FOREIGN KEY (contract_id) REFERENCES contracts(id) ON DELETE CASCADE
+    TABLE "advanced_skater_stats" CONSTRAINT "advanced_skater_stats_contract_id_fkey" FOREIGN KEY (contract_id) REFERENCES contracts(id) ON DELETE CASCADE
+    TABLE "advanced_goalie_stats" CONSTRAINT "fk_advanced_goalie_stats_contract" FOREIGN KEY (contract_id) REFERENCES contracts(id) ON DELETE CASCADE
+    TABLE "advanced_skater_stats" CONSTRAINT "fk_advanced_skater_stats_contract" FOREIGN KEY (contract_id) REFERENCES contracts(id) ON DELETE CASCADE
+    TABLE "basic_goalie_stats" CONSTRAINT "fk_basic_goalie_stats_contract" FOREIGN KEY (contract_id) REFERENCES contracts(id) ON DELETE CASCADE
+    TABLE "basic_player_stats" CONSTRAINT "fk_stats_contract" FOREIGN KEY (contract_id) REFERENCES contracts(id) ON DELETE CASCADE
+    TABLE "player_salaries" CONSTRAINT "player_salaries_contract_id_fkey" FOREIGN KEY (contract_id) REFERENCES contracts(id) ON DELETE CASCADE
 
-player_info
+                                  Table "public.player_salaries"
+   Column    |     Type      | Collation | Nullable |                   Default                   
+-------------+---------------+-----------+----------+---------------------------------------------
+ id          | integer       |           | not null | nextval('player_salaries_id_seq'::regclass)
+ player_id   | integer       |           |          | 
+ contract_id | integer       |           |          | 
+ year        | integer       |           | not null | 
+ cap_hit     | numeric(12,2) |           | not null | 
+ cap_pct     | numeric(5,4)  |           | not null | 
+Indexes:
+    "player_salaries_pkey" PRIMARY KEY, btree (id)
+    "player_salaries_contract_id_year_key" UNIQUE CONSTRAINT, btree (contract_id, year)
+Foreign-key constraints:
+    "player_salaries_contract_id_fkey" FOREIGN KEY (contract_id) REFERENCES contracts(id) ON DELETE CASCADE
+    "player_salaries_player_id_fkey" FOREIGN KEY (player_id) REFERENCES player_info(id) ON DELETE CASCADE
+
+                                     Table "public.player_info"
+  Column   |         Type          | Collation | Nullable |                 Default                 
 -----------+-----------------------+-----------+----------+-----------------------------------------
  id        | integer               |           | not null | nextval('player_info_id_seq'::regclass)
  firstname | character varying(50) |           | not null | 
@@ -310,6 +316,12 @@ player_info
 Indexes:
     "player_info_pkey" PRIMARY KEY, btree (id)
 Referenced by:
+    TABLE "advanced_goalie_stats" CONSTRAINT "advanced_goalie_stats_player_id_fkey" FOREIGN KEY (player_id) REFERENCES player_info(id) ON DELETE CASCADE
+    TABLE "advanced_skater_stats" CONSTRAINT "advanced_skater_stats_player_id_fkey" FOREIGN KEY (player_id) REFERENCES player_info(id) ON DELETE CASCADE
     TABLE "contracts" CONSTRAINT "contracts_player_id_fkey" FOREIGN KEY (player_id) REFERENCES player_info(id) ON DELETE CASCADE
+    TABLE "advanced_goalie_stats" CONSTRAINT "fk_advanced_goalie_stats_player" FOREIGN KEY (player_id) REFERENCES player_info(id) ON DELETE CASCADE
+    TABLE "advanced_skater_stats" CONSTRAINT "fk_advanced_skater_stats_player" FOREIGN KEY (player_id) REFERENCES player_info(id) ON DELETE CASCADE
+    TABLE "basic_goalie_stats" CONSTRAINT "fk_basic_goalie_stats_player" FOREIGN KEY (player_id) REFERENCES player_info(id) ON DELETE CASCADE
     TABLE "basic_player_stats" CONSTRAINT "fk_stats_player" FOREIGN KEY (player_id) REFERENCES player_info(id) ON DELETE CASCADE
+    TABLE "player_salaries" CONSTRAINT "player_salaries_player_id_fkey" FOREIGN KEY (player_id) REFERENCES player_info(id) ON DELETE CASCADE
 
