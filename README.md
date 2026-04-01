@@ -6,9 +6,10 @@ A full-stack web application that predicts NHL player contract values using mach
 
 - **Player Database**: Browse and search through NHL players with their statistics and contract information
 - **Contract Analysis**: View detailed contract information including cap hits, duration, and total value
-- **ML Predictions**: Predict contract values based on player statistics using trained machine learning models
-- **Data Scraping**: Automated data collection from CapWages and NHL API
-- **Web Interface**: Modern React frontend with responsive design
+- **Actual vs expected by year**: For each contract year, compare **actual** cap hit (from saved salary rows) to **expected** cap hit from the ML model using **that season’s** advanced stats (see [Contract predictions](#contract-predictions-actual-vs-expected) below)
+- **ML Predictions**: Train and run models (forwards, defensemen, goalies) on advanced metrics; optional simple prediction API for basic stat inputs
+- **Data Scraping**: Automated data collection from CapWages and the NHL API (basic stats, advanced skater/goalie stats, contracts, salaries)
+- **Web Interface**: React frontend with Vite
 
 ## Tech Stack
 
@@ -68,7 +69,7 @@ TradeValue/
 
 ## Database Schema
 
-The application uses three main tables:
+Core tables include (among others):
 
 ### player_info
 Stores basic player information:
@@ -96,6 +97,14 @@ Stores player statistics by season:
 - `gp`, `goals`, `assists`, `points`
 - `plus_minus`, `pim`, `shots`, `shootpct`
 
+### player_salaries
+Per-player, per-contract-year salary rows (actual cap hit for a given NHL season year), used as ML labels and for the “actual” column in contract predictions:
+- Links to `player_id`, `contract_id`, and a `year` (season start year, e.g. `2023` for 2023–24)
+- `cap_hit`, optional flags such as **ELC slide** (`is_slide`) where applicable
+
+### Advanced stats (skaters / goalies)
+The ML pipeline and `/contract-predictions` use **`advanced_skater_stats`** and **`advanced_goalie_stats`** (joined by `player_id`, `contract_id`, `season`, `situation`, `playoff`). Goalie inference also uses **`basic_goalie_stats`** where present. Populate these with the scripting modules under `backend/app/ScriptingFiles/` (see [Data Collection](#data-collection)).
+
 ## Setup
 
 ### Prerequisites
@@ -107,11 +116,18 @@ Stores player statistics by season:
 
 ### Environment Variables
 
-Create a `.env` file in the root directory:
+Variables are read in `backend/app/config.py` (`DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT`, `DB_NAME`). The app loads **`backend/.env`** via `python-dotenv`.
+
+- **Docker Compose**: Put credentials in a **project root** `.env` file so Compose can substitute `${DB_USER}`, `${DB_PASSWORD}`, and `${DB_NAME}` into the backend service environment (see `docker-compose.yml`). The backend container also receives `DB_HOST=host.docker.internal` so it can reach PostgreSQL on the host machine.
+- **Local backend** (`uvicorn` on your machine): Use **`backend/.env`** with the same keys. For local runs, `DB_HOST=localhost` is typical. If `DB_HOST` is `host.docker.internal` and you are not in Docker, `config.py` rewrites it to `localhost`.
+
+Example:
 
 ```env
 DB_USER=your_db_user
 DB_PASSWORD=your_db_password
+DB_HOST=localhost
+DB_PORT=5432
 DB_NAME=your_database_name
 ```
 
@@ -216,6 +232,16 @@ cd backend
 python3 -m app.ScriptingFiles.save_individual_contract_years
 ```
 
+### Advanced statistics (skaters / goalies)
+
+These populate `advanced_skater_stats` / `advanced_goalie_stats` (and related basic goalie stats) for model training and per-year predictions:
+
+```bash
+cd backend
+python3 -m app.ScriptingFiles.save_skater_advanced_stats
+python3 -m app.ScriptingFiles.save_goalie_advanced_stats
+```
+
 Note: The NHL API has rate limits. The scripts include delays and retry logic to handle this.
 
 ## Machine Learning Pipeline
@@ -248,11 +274,19 @@ cd backend
 python3 -c "from app.ml.training.evaluate import evaluate_model; print('Forward:', evaluate_model('forward_model')); print('Defenseman:', evaluate_model('defenseman_model')); print('Goalie:', evaluate_model('goalie_model'))"
 ```
 
-### Contract Predictions (“Actual vs Expected”)
+### Contract predictions (actual vs expected)
 
-`GET /api/players/{player_id}/contract-predictions` returns rows with:
-- `actual_cap_hit`: sourced from `player_salaries.cap_hit` for that `(player_id, contract_id, year)`
-- `expected_cap_hit`: sourced from the ML prediction keyed by `contract_id`
+`GET /api/players/{player_id}/contract-predictions` returns one row per salary year with:
+
+| Field | Meaning |
+|--------|---------|
+| `actual_cap_hit` | From `player_salaries.cap_hit` for that `(player_id, contract_id, year)` |
+| `expected_cap_hit` | ML prediction using **advanced stats for `season == year`** (same contract). Contract context (`rfa`, `duration`, etc.) and `player.age` follow the same pattern as training inference; rate-style features reflect **that season’s** performance. |
+| `is_slide` | ELC slide years: `expected_cap_hit` is `0` by convention |
+
+**Fallback**: If there is no advanced-stats row for that season, or prediction fails (e.g. very low ice time filtered out), the API uses the **signing-year** prediction (`season == contract.start_year`). If that is also unavailable, `expected_cap_hit` is `0`.
+
+Training still builds **one row per contract** at signing (see below); per-year expected values are **inference-only** and are best interpreted as exploratory “market value from that season’s numbers,” not a separately retrained model.
 
 ### Making Predictions
 
@@ -277,8 +311,7 @@ Use the prediction API endpoint or the web interface to make predictions based o
 - `GET /api/players/{player_id}/stats` - Get player statistics (query params: season, team, playoff)
 
 ### ML/Predictions
-- `POST /api/ml/predict` - Predict contract value
-  - Body: `{ position, gp, goals, assists, points, plus_minus, pim, shots, shootpct }`
+- `POST /api/ml/predict` - Predict contract value from **advanced** stat fields (see `PredictionRequest` in `backend/app/schemas.py`): required `position` (`forward`, `defenseman`, or `goalie`); skaters send metrics such as `icetime`, `i_f_points`, `on_ice_x_goals_percentage`, zone starts, etc.; goalies send goalie advanced fields (`x_goals`, `goals`, danger buckets, …) plus optional `gp` / `wins` / … . Omitted fields are filled with defaults where the predictor allows.
 
 See http://localhost:8000/docs for interactive API documentation.
 
