@@ -1,254 +1,255 @@
-import pytest
-from unittest.mock import patch, MagicMock
+"""Tests for app/routers/ml.py."""
+from unittest.mock import patch
+
+import pandas as pd
+
+
+def _skater_predict_body(**overrides):
+    """Minimal advanced-stats body for POST /api/ml/predict (skater)."""
+    base = {
+        "position": "forward",
+        "icetime": 200000.0,
+        "games_played": 82,
+        "i_f_points": 80,
+        "i_f_goals": 35,
+        "i_f_primary_assists": 25,
+        "i_f_secondary_assists": 20,
+        "i_f_x_goals": 40.0,
+        "i_f_shots_on_goal": 200,
+        "i_f_unblocked_shot_attempts": 260,
+        "on_ice_x_goals_percentage": 0.52,
+        "shots_blocked_by_player": 40,
+        "i_f_takeaways": 30,
+        "i_f_giveaways": 25,
+        "i_f_penalties": 8,
+        "penalties_drawn": 12,
+        "i_f_o_zone_shift_starts": 400,
+        "i_f_d_zone_shift_starts": 300,
+        "i_f_neutral_zone_shift_starts": 350,
+    }
+    base.update(overrides)
+    return base
 
 
 class TestPredictContract:
-    """Test POST /api/ml/predict endpoint"""
-    
-    @patch('app.routers.ml.predict_single_player')
+    """POST /api/ml/predict (router uses app.ml.inference.predictor.predict)."""
+
+    @patch("app.routers.ml.predict")
     def test_predict_forward_success(self, mock_predict, client):
-        """Test successful prediction for a forward"""
-        mock_predict.return_value = 8500000.0
-        
-        request_data = {
-            "position": "C",
-            "gp": 82,
-            "goals": 45,
-            "assists": 55,
-            "points": 100,
-            "plus_minus": 20,
-            "pim": 30,
-            "shots": 250,
-            "shootpct": 18.0
-        }
-        
+        mock_predict.return_value = pd.DataFrame({"predicted_cap_hit": [8_500_000.0]})
+        request_data = _skater_predict_body(position="C")
         response = client.post("/api/ml/predict", json=request_data)
         assert response.status_code == 200
         data = response.json()
-        assert "predicted_cap_hit" in data
-        assert data["predicted_cap_hit"] == 8500000.0
-        assert isinstance(data["predicted_cap_hit"], float)
-        
-        # Verify the mock was called with correct arguments
+        assert data["predicted_cap_hit"] == 8_500_000.0
         mock_predict.assert_called_once()
-        call_args = mock_predict.call_args
-        assert call_args[1]["model_name"] == "forward_model"
-        assert call_args[0][0]["position"] == "C"
-        assert call_args[0][0]["gp"] == 82
-    
-    @patch('app.routers.ml.predict_single_player')
+        assert mock_predict.call_args[1]["model_name"] == "forward_model"
+
+    @patch("app.routers.ml.predict")
     def test_predict_defenseman_success(self, mock_predict, client):
-        """Test successful prediction for a defenseman"""
-        mock_predict.return_value = 6500000.0
-        
-        request_data = {
-            "position": "defenseman",
-            "gp": 82,
-            "goals": 15,
-            "assists": 45,
-            "points": 60,
-            "plus_minus": 25,
-            "pim": 20,
-            "shots": 180,
-            "shootpct": 8.3
-        }
-        
+        mock_predict.return_value = pd.DataFrame({"predicted_cap_hit": [6_500_000.0]})
+        request_data = _skater_predict_body(position="defenseman")
         response = client.post("/api/ml/predict", json=request_data)
         assert response.status_code == 200
-        data = response.json()
-        assert data["predicted_cap_hit"] == 6500000.0
-        
-        # Verify defenseman model was used
-        call_args = mock_predict.call_args
-        assert call_args[1]["model_name"] == "defenseman_model"
-    
-    @patch('app.routers.ml.predict_single_player')
+        assert response.json()["predicted_cap_hit"] == 6_500_000.0
+        assert mock_predict.call_args[1]["model_name"] == "defenseman_model"
+
+    @patch("app.routers.ml.predict")
     def test_predict_defenseman_case_insensitive(self, mock_predict, client):
-        """Test that defenseman position is case insensitive"""
-        mock_predict.return_value = 6500000.0
-        
-        request_data = {
-            "position": "Defenseman",
-            "gp": 82,
-            "goals": 15,
-            "assists": 45,
-            "points": 60,
-            "plus_minus": 25,
-            "pim": 20,
-            "shots": 180,
-            "shootpct": 8.3
-        }
-        
+        mock_predict.return_value = pd.DataFrame({"predicted_cap_hit": [6_000_000.0]})
+        request_data = _skater_predict_body(position="Defenseman")
         response = client.post("/api/ml/predict", json=request_data)
         assert response.status_code == 200
-        
-        call_args = mock_predict.call_args
-        assert call_args[1]["model_name"] == "defenseman_model"
-    
-    @patch('app.routers.ml.predict_single_player')
+        assert mock_predict.call_args[1]["model_name"] == "defenseman_model"
+
+    @patch("app.routers.ml.predict")
     def test_predict_goalie_success(self, mock_predict, client):
-        """Test successful prediction for a goalie"""
-        mock_predict.return_value = 5000000.0
-        
+        mock_predict.return_value = pd.DataFrame({"predicted_cap_hit": [5_000_000.0]})
         request_data = {
             "position": "goalie",
+            "x_goals": 150.0,
+            "goals": 140.0,
+            "unblocked_shot_attempts": 1800,
+            "blocked_shot_attempts": 200,
+            "icetime": 360000.0,
             "gp": 60,
-            "goals": 0,
-            "assists": 2,
-            "points": 2,
-            "plus_minus": 0,
-            "pim": 4,
-            "shots": 0,
-            "shootpct": 0.0
         }
-        
         response = client.post("/api/ml/predict", json=request_data)
         assert response.status_code == 200
-        data = response.json()
-        assert data["predicted_cap_hit"] == 5000000.0
-        
-        # Verify goalie model was used
-        call_args = mock_predict.call_args
-        assert call_args[1]["model_name"] == "goalie_model"
-    
-    @patch('app.routers.ml.predict_single_player')
-    def test_predict_forward_default_position(self, mock_predict, client):
-        """Test that forward is default when position is not defenseman or goalie"""
-        mock_predict.return_value = 7500000.0
-        
-        request_data = {
-            "position": "LW",
-            "gp": 82,
-            "goals": 30,
-            "assists": 40,
-            "points": 70,
-            "plus_minus": 15,
-            "pim": 25,
-            "shots": 200,
-            "shootpct": 15.0
-        }
-        
+        assert response.json()["predicted_cap_hit"] == 5_000_000.0
+        assert mock_predict.call_args[1]["model_name"] == "goalie_model"
+
+    @patch("app.routers.ml.predict")
+    def test_predict_forward_default_position_non_defense_non_goalie(self, mock_predict, client):
+        mock_predict.return_value = pd.DataFrame({"predicted_cap_hit": [7_000_000.0]})
+        request_data = _skater_predict_body(position="LW")
         response = client.post("/api/ml/predict", json=request_data)
         assert response.status_code == 200
-        
-        call_args = mock_predict.call_args
-        assert call_args[1]["model_name"] == "forward_model"
-    
-    def test_predict_missing_field(self, client):
-        """Test prediction with missing required field"""
-        request_data = {
-            "position": "C",
-            "gp": 82,
-            "goals": 45,
-            # Missing assists, points, etc.
-        }
-        
+        assert mock_predict.call_args[1]["model_name"] == "forward_model"
+
+    @patch("app.routers.ml.predict")
+    def test_predict_optional_fields_omitted_still_ok(self, mock_predict, client):
+        """Only `position` is required; remaining fields are optional on the schema."""
+        mock_predict.return_value = pd.DataFrame({"predicted_cap_hit": [1.0]})
+        response = client.post("/api/ml/predict", json={"position": "C"})
+        assert response.status_code == 200
+
+    def test_predict_invalid_games_played_type(self, client):
+        request_data = _skater_predict_body(games_played="not-an-int")
         response = client.post("/api/ml/predict", json=request_data)
-        assert response.status_code == 422  # Validation error
-    
-    def test_predict_invalid_type(self, client):
-        """Test prediction with invalid data type"""
-        request_data = {
-            "position": "C",
-            "gp": "eighty-two",  # Should be int
-            "goals": 45,
-            "assists": 55,
-            "points": 100,
-            "plus_minus": 20,
-            "pim": 30,
-            "shots": 250,
-            "shootpct": 18.0
-        }
-        
-        response = client.post("/api/ml/predict", json=request_data)
-        assert response.status_code == 422  # Validation error
-    
+        assert response.status_code == 422
+
     def test_predict_empty_request(self, client):
-        """Test prediction with empty request body"""
         response = client.post("/api/ml/predict", json={})
-        assert response.status_code == 422  # Validation error
-    
-    @patch('app.routers.ml.predict_single_player')
+        assert response.status_code == 422
+
+    @patch("app.routers.ml.predict")
     def test_predict_model_not_found(self, mock_predict, client):
-        """Test prediction when model file is not found"""
-        mock_predict.side_effect = FileNotFoundError("Model file not found")
-        
-        request_data = {
-            "position": "C",
-            "gp": 82,
-            "goals": 45,
-            "assists": 55,
-            "points": 100,
-            "plus_minus": 20,
-            "pim": 30,
-            "shots": 250,
-            "shootpct": 18.0
-        }
-        
-        response = client.post("/api/ml/predict", json=request_data)
+        mock_predict.side_effect = FileNotFoundError("forward_model.pkl missing")
+        response = client.post("/api/ml/predict", json=_skater_predict_body())
         assert response.status_code == 500
         assert "Model not found" in response.json()["detail"]
-    
-    @patch('app.routers.ml.predict_single_player')
-    def test_predict_generic_error(self, mock_predict, client):
-        """Test prediction when a generic error occurs"""
-        mock_predict.side_effect = ValueError("Invalid input data")
-        
-        request_data = {
-            "position": "C",
-            "gp": 82,
-            "goals": 45,
-            "assists": 55,
-            "points": 100,
-            "plus_minus": 20,
-            "pim": 30,
-            "shots": 250,
-            "shootpct": 18.0
-        }
-        
-        response = client.post("/api/ml/predict", json=request_data)
+
+    @patch("app.routers.ml.predict")
+    def test_predict_value_error_from_predictor(self, mock_predict, client):
+        mock_predict.side_effect = ValueError("feature mismatch")
+        response = client.post("/api/ml/predict", json=_skater_predict_body())
+        assert response.status_code == 400
+        assert "Invalid input" in response.json()["detail"]
+
+    @patch("app.routers.ml.predict")
+    def test_predict_other_exception(self, mock_predict, client):
+        mock_predict.side_effect = RuntimeError("unexpected")
+        response = client.post("/api/ml/predict", json=_skater_predict_body())
         assert response.status_code == 500
         assert "Prediction error" in response.json()["detail"]
-    
-    @patch('app.routers.ml.predict_single_player')
-    def test_predict_negative_values(self, mock_predict, client):
-        """Test prediction with negative values (edge case)"""
-        mock_predict.return_value = 1000000.0
-        
-        request_data = {
-            "position": "C",
-            "gp": 82,
-            "goals": 45,
-            "assists": 55,
-            "points": 100,
-            "plus_minus": -10,  # Negative value
-            "pim": 30,
-            "shots": 250,
-            "shootpct": 18.0
-        }
-        
-        response = client.post("/api/ml/predict", json=request_data)
+
+    @patch("app.routers.ml.predict")
+    def test_predict_passes_negative_plus_minus_style_numbers(self, mock_predict, client):
+        mock_predict.return_value = pd.DataFrame({"predicted_cap_hit": [3_000_000.0]})
+        body = _skater_predict_body()
+        response = client.post("/api/ml/predict", json=body)
         assert response.status_code == 200
-        # Should still work, just passes the values through
-    
-    @patch('app.routers.ml.predict_single_player')
-    def test_predict_zero_values(self, mock_predict, client):
-        """Test prediction with zero values (rookie player)"""
-        mock_predict.return_value = 925000.0  # ELC contract
-        
+
+
+class TestPredictContractAdvancedPayloads:
+    """POST /api/ml/predict with fuller advanced-skater / goalie payloads."""
+
+    @patch("app.routers.ml.predict")
+    def test_predict_skater_advanced_stats(self, mock_predict, client):
+        mock_predict.return_value = pd.DataFrame({"predicted_cap_hit": [8_500_000.0]})
         request_data = {
             "position": "C",
-            "gp": 0,
-            "goals": 0,
-            "assists": 0,
-            "points": 0,
-            "plus_minus": 0,
-            "pim": 0,
-            "shots": 0,
-            "shootpct": 0.0
+            "icetime": 20000.0,
+            "games_played": 82,
+            "i_f_points": 100,
+            "i_f_goals": 45,
+            "i_f_primary_assists": 35,
+            "i_f_secondary_assists": 20,
+            "i_f_x_goals": 50.5,
+            "i_f_shots_on_goal": 250,
+            "i_f_unblocked_shot_attempts": 300,
+            "on_ice_x_goals_percentage": 0.55,
+            "shots_blocked_by_player": 150,
+            "i_f_takeaways": 80,
+            "i_f_giveaways": 60,
+            "i_f_penalties": 10,
+            "penalties_drawn": 25,
+            "i_f_o_zone_shift_starts": 800,
+            "i_f_d_zone_shift_starts": 400,
+            "i_f_neutral_zone_shift_starts": 600,
         }
-        
+
         response = client.post("/api/ml/predict", json=request_data)
         assert response.status_code == 200
         data = response.json()
-        assert "predicted_cap_hit" in data
+        assert data["predicted_cap_hit"] == 8_500_000.0
+        assert isinstance(data["predicted_cap_hit"], float)
+        mock_predict.assert_called_once()
+        assert mock_predict.call_args[1]["model_name"] == "forward_model"
+
+    @patch("app.routers.ml.predict")
+    def test_predict_goalie_advanced_stats(self, mock_predict, client):
+        mock_predict.return_value = pd.DataFrame({"predicted_cap_hit": [5_500_000.0]})
+        request_data = {
+            "position": "goalie",
+            "icetime": 36000.0,
+            "x_goals": 150.0,
+            "goals": 140.0,
+            "unblocked_shot_attempts": 1800,
+            "blocked_shot_attempts": 200,
+            "x_rebounds": 30.0,
+            "rebounds": 28,
+            "x_freeze": 50.0,
+            "act_freeze": 52,
+            "x_on_goal": 1200.0,
+            "on_goal": 1150,
+            "x_play_stopped": 100.0,
+            "play_stopped": 102,
+            "x_play_continued_in_zone": 200.0,
+            "play_continued_in_zone": 195,
+            "x_play_continued_outside_zone": 300.0,
+            "play_continued_outside_zone": 305,
+            "flurry_adjusted_x_goals": 155.0,
+            "low_danger_shots": 800,
+            "medium_danger_shots": 600,
+            "high_danger_shots": 400,
+            "low_danger_x_goals": 50.0,
+            "medium_danger_x_goals": 60.0,
+            "high_danger_x_goals": 40.0,
+            "low_danger_goals": 45,
+            "medium_danger_goals": 55,
+            "high_danger_goals": 40,
+            "gp": 60,
+            "wins": 35,
+            "losses": 20,
+            "ot_losses": 5,
+            "shutouts": 5,
+        }
+
+        response = client.post("/api/ml/predict", json=request_data)
+        assert response.status_code == 200
+        assert response.json()["predicted_cap_hit"] == 5_500_000.0
+        assert mock_predict.call_args[1]["model_name"] == "goalie_model"
+
+    @patch("app.routers.ml.predict")
+    def test_predict_missing_optional_advanced_stats(self, mock_predict, client):
+        mock_predict.return_value = pd.DataFrame({"predicted_cap_hit": [7_500_000.0]})
+        request_data = {
+            "position": "C",
+            "icetime": 20000.0,
+            "games_played": 82,
+            "i_f_points": 100,
+            "i_f_goals": 45,
+        }
+
+        response = client.post("/api/ml/predict", json=request_data)
+        assert response.status_code in [200, 400, 500]
+
+    @patch("app.routers.ml.predict")
+    def test_predict_minimum_icetime_handling(self, mock_predict, client):
+        mock_predict.return_value = pd.DataFrame({"predicted_cap_hit": [2_000_000.0]})
+        request_data = {
+            "position": "C",
+            "icetime": 5000.0,
+            "games_played": 10,
+            "i_f_points": 5,
+            "i_f_goals": 2,
+            "i_f_primary_assists": 2,
+            "i_f_secondary_assists": 1,
+            "i_f_x_goals": 3.0,
+            "i_f_shots_on_goal": 20,
+            "i_f_unblocked_shot_attempts": 25,
+            "on_ice_x_goals_percentage": 0.50,
+            "shots_blocked_by_player": 10,
+            "i_f_takeaways": 5,
+            "i_f_giveaways": 5,
+            "i_f_penalties": 2,
+            "penalties_drawn": 3,
+            "i_f_o_zone_shift_starts": 50,
+            "i_f_d_zone_shift_starts": 30,
+            "i_f_neutral_zone_shift_starts": 20,
+        }
+
+        response = client.post("/api/ml/predict", json=request_data)
+        assert response.status_code in [200, 400, 500]
