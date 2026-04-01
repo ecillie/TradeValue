@@ -11,6 +11,7 @@ from decimal import Decimal
 from app.database import SessionLocal, init_db
 from app.models import Player, Contract, BasicPlayerStats, BasicGoalieStats
 
+# cd backend && DB_HOST=localhost python3 -m app.ScriptingFiles.save_basic_player_stats
 
 headers = {
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
@@ -20,7 +21,6 @@ headers = {
 def make_request_with_rate_limit(url, delay=0.5, max_retries=3):
     """Makes an API request with some delays to avoid getting rate limited, and retries if things go wrong"""
     for attempt in range(max_retries):
-        print(url)
         try:
             time.sleep(delay)
             response = requests.get(url, headers=headers, timeout=10)
@@ -62,14 +62,12 @@ def get_skater_stats():
             return False
         
         team_abbrs = [t['teamAbbrev']['default'] for t in teams_resp.get('standings', [])]
-        print(team_abbrs)
     except Exception as e:
         traceback.print_exc()
         return False
 
     skipped_teams = []
     for i, abbr in enumerate(team_abbrs):
-        print(abbr)
         roster_url = f"https://api-web.nhle.com/v1/roster/{abbr}/current"
         roster = make_request_with_rate_limit(roster_url, delay=0.5)
         if not roster:
@@ -78,9 +76,7 @@ def get_skater_stats():
         
         player_count = 0
         for group in ['forwards', 'defensemen', 'goalies']:
-            print(group)
             for player in roster.get(group, []):
-                print(player)
                 if 'id' in player:
                     active_ids.add(player['id'])
                     player_count += 1
@@ -90,9 +86,7 @@ def get_skater_stats():
     stats_base_url = "https://api.nhle.com/stats/rest/en/skater/summary"
     
     for i, pid in enumerate(active_ids):
-        print(pid)
         for game_type in [2, 3]:
-            print(game_type)
             params = {
                 "isAggregate": "false",
                 "isGame": "false",
@@ -116,7 +110,6 @@ def get_skater_stats():
                 data = resp.json().get('data', [])
                 
                 for season_entry in data:
-                    print(season_entry)
                     s_id = str(season_entry.get('seasonId'))
                     season_int = int(s_id[:4])
                     
@@ -160,7 +153,6 @@ def get_goalie_stats():
         return False
 
     for i, abbr in enumerate(team_abbrs):
-        print(abbr)
         roster_url = f"https://api-web.nhle.com/v1/roster/{abbr}/current"
         roster = make_request_with_rate_limit(roster_url, delay=0.5)
         
@@ -169,9 +161,7 @@ def get_goalie_stats():
 
         player_count = 0
         for group in ['goalies']:
-            print(group)
             for player in roster.get(group, []):
-                print(player)
                 if 'id' in player:
                     active_ids.add(player['id'])
                     player_count += 1
@@ -181,9 +171,7 @@ def get_goalie_stats():
     stats_base_url = "https://api.nhle.com/stats/rest/en/goalie/summary"
 
     for i, pid in enumerate(active_ids):
-        print(pid)
         for game_type in [2, 3]:
-            print(game_type)
             params = {
                 "isAggregate": "false",
                 "isGame": "false",
@@ -206,7 +194,6 @@ def get_goalie_stats():
                 
                 data = resp.json().get('data', [])
                 for season_entry in data:
-                    print(season_entry)
                     s_id = str(season_entry.get('seasonId'))
                     season_int = int(s_id[:4])
                     
@@ -245,7 +232,6 @@ def save_goalie_stats_to_db(stats_records):
         skipped_count = 0
         
         for record in stats_records:
-            print(record)
             player_name = record.get('player_name', '')
             firstname, lastname = parse_player_name(player_name)
             
@@ -370,8 +356,7 @@ def save_stats_to_db(stats_records):
         updated_count = 0
         skipped_count = 0
         
-        for record in stats_records:
-            print(record)
+        for record in stats_records:    
             player_name = record.get('player_name', '')
             firstname, lastname = parse_player_name(player_name)
             
@@ -466,29 +451,10 @@ def save_stats_to_db(stats_records):
     finally:
         db.close()
 
-"""Quick DB connectivity check. Run from backend: python3 test_db_connection.py"""
-from sqlalchemy import text
-from app.database import engine
-
-def test_connection():
-    try:
-        with engine.connect() as conn:
-            one = conn.execute(text("SELECT 1")).scalar()
-            print("OK: connected. SELECT 1 =>", one)
-            rows = conn.execute(
-                text(
-                    "SELECT table_name FROM information_schema.tables "
-                    "WHERE table_schema = 'public' ORDER BY table_name"
-                )
-            ).fetchall()
-            print("Tables:", [r[0] for r in rows])
-    except Exception as e:
-        print("FAILED:", type(e).__name__, e)
 
 
     
 if __name__ == "__main__":
-    test_connection()
     get_skater_stats()
     print("Skater stats saved to database")
     get_goalie_stats()
