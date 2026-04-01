@@ -116,6 +116,7 @@ class YearPrediction(BaseModel):
     actual_cap_hit: float
     expected_cap_hit: float
     contract_id: int
+    is_slide: bool = False
 
 @router.get("/{player_id}/contract-predictions", response_model=List[YearPrediction])
 def get_player_contract_predictions(player_id: int, db: Session = Depends(get_db)):
@@ -320,8 +321,9 @@ def get_player_contract_predictions(player_id: int, db: Session = Depends(get_db
             YearPrediction(
                 year=year_int,
                 actual_cap_hit=float(row.cap_hit) if row.cap_hit is not None else 0.0,
-                expected_cap_hit=expected_by_contract_id.get(row.contract_id, 0.0),
+                expected_cap_hit=0.0 if row.is_slide else expected_by_contract_id.get(row.contract_id, 0.0),
                 contract_id=row.contract_id,
+                is_slide=bool(getattr(row, "is_slide", False)),
             )
         )
     return predictions

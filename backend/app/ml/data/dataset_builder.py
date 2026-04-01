@@ -112,6 +112,7 @@ def build_skater_advanced_dataset(player_list: list[Player]):
             )
             .filter(
                 Contract.elc == False,
+                PlayerSalary.is_slide == False,
                 Player.id.in_(player_ids),
             )
         )
@@ -208,6 +209,7 @@ def goalie_advanced_dataset(player_list: list[Player]):
             )
             .filter(
                 Contract.elc == False,
+                PlayerSalary.is_slide == False,
                 Player.id.in_(player_ids),
             )
         )
