@@ -303,5 +303,5 @@ def save_individual_contract_years():
         db.close()
 
 
-if __name__ == "__main__":
+def main():
     save_individual_contract_years()

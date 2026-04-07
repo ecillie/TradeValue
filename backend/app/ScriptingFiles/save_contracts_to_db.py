@@ -264,6 +264,6 @@ def save_contracts_to_db():
         db.close()
 
 
-if __name__ == "__main__":    
+def main():
     save_contracts_to_db()
 
