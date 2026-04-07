@@ -364,7 +364,7 @@ def save_skater_advanced_stats_to_db(df):
     finally:
         db.close()
 
-if __name__ == "__main__":
+def main():
     df = load_skater_advanced_stats_csv()
     save_skater_advanced_stats_to_db(df)
    

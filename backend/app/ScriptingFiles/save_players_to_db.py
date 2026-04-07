@@ -129,7 +129,7 @@ def save_players_to_db(players: list):
         db.close()
 
 
-if __name__ == "__main__":
+def main():
     players = scrape_all_players()    
     save_players_to_db(players)
     

@@ -167,6 +167,6 @@ def save_goalie_advanced_stats_to_db(df):
     finally:
         db.close()
 
-if __name__ == "__main__":
+def main():
     df = load_goalie_advanced_stats_csv()
     save_goalie_advanced_stats_to_db(df)

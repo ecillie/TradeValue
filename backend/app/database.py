@@ -4,16 +4,15 @@ from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import sessionmaker
 from app.config import DATABASE_URL
 
-# Create database engine
 engine = create_engine(
     DATABASE_URL,
-    echo=False  # Set to False to reduce logging verbosity
+    pool_pre_ping=True,
+    pool_recycle=300,
+    echo=False,
 )
 
-# Create session factory
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# Base class for models
 Base = declarative_base()
 
 

@@ -454,9 +454,8 @@ def save_stats_to_db(stats_records):
 
 
     
-if __name__ == "__main__":
+def main():
     get_skater_stats()
-    print("Skater stats saved to database")
     get_goalie_stats()
-    print("Goalie stats saved to database")
+    
 
